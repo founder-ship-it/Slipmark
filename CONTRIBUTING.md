@@ -72,10 +72,12 @@ Every change needs a test. Run `npm test`. New engine behavior should assert the
    (README, Action and plugin skills). Merge it once CI is green.
 2. Create a GitHub release with the tag `v<version>` on `main`, with
    "Publish this Action to the GitHub Marketplace" ticked.
-3. `.github/workflows/publish.yml` then publishes to npm through trusted
-   publishing, with provenance. No npm token, and nothing is published from a
-   laptop. It refuses if the tag doesn't match package.json, and runs the full
-   test suite first.
+3. `.github/workflows/publish.yml` then stages it on npm through trusted
+   publishing. No npm token, and nothing is published from a laptop. It
+   refuses if the tag doesn't match package.json, and runs the full test suite
+   first.
+4. Approve the staged version on npmjs.com (Staged Packages tab) or with
+   `npm stage approve <id>`, with 2FA. Only then does it go live.
 
 ## Non-negotiables (the things that make Slipmark trustworthy)
 

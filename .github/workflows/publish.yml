@@ -1,11 +1,14 @@
-# Publishes slipmark to npm when a GitHub release is published, with npm's
-# trusted publishing: no npm token is stored anywhere, and the package gets a
-# provenance statement ("Built and signed on GitHub Actions") tying it to this
-# workflow and commit, logged in Sigstore's public ledger.
+# Stages slipmark on npm when a GitHub release is published, with npm's
+# trusted publishing: no npm token is stored anywhere, and the build carries a
+# provenance statement tying it to this workflow and commit.
+#
+# Staged, not published: the version goes live only when a maintainer approves
+# it on npmjs.com (Staged Packages tab) or with `npm stage approve <id>`, with
+# 2FA. A stolen workflow can't ship a release on its own.
 #
 # One-time setup on npmjs.com: package settings > Trusted publisher > GitHub
 # Actions, with owner founder-ship-it, repository Slipmark, workflow
-# publish.yml and environment npm.
+# publish.yml and environment npm. "Allow npm publish" stays unticked.
 name: Publish to npm
 
 on:
@@ -30,8 +33,8 @@ jobs:
         with:
           node-version: "24"
           registry-url: https://registry.npmjs.org
-      - name: npm 11.5.1 or later (trusted publishing needs it)
-        run: npm install -g npm@^11.5.1 && npm --version
+      - name: npm 11.15.0 or later (staged publishing needs it)
+        run: npm install -g npm@^11.15.0 && npm --version
       - name: Check the tag matches package.json
         env:
           TAG: ${{ github.event.release.tag_name }}
@@ -52,11 +55,15 @@ jobs:
           fi
       - run: npm ci
         if: env.SKIP != '1'
-      - name: Publish (runs the tests first, through prepublishOnly)
+      - name: Test
         if: env.SKIP != '1'
-        run: npm publish --provenance --access public
+        run: npm test
+      - name: Stage for approval
+        if: env.SKIP != '1'
+        run: npm stage publish
       - name: Summary
         if: env.SKIP != '1'
         run: |
           version=$(node -p "require('./package.json').version")
-          echo "Published [slipmark@$version](https://www.npmjs.com/package/slipmark/v/$version) with provenance." >> "$GITHUB_STEP_SUMMARY"
+          echo "Staged slipmark@$version. Approve it on npmjs.com (Staged Packages tab) or with \`npm stage approve <id>\`, with 2FA, to make it live." >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice title=Approve on npm::slipmark@$version is staged. Approve it on npmjs.com to publish."

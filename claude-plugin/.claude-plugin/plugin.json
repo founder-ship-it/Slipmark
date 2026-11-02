@@ -1,6 +1,6 @@
 {
   "name": "slipmark",
-  "version": "0.6.1",
+  "version": "0.6.2",
   "description": "Make Claude prove what it checked. Records every verdict with the SHA-256 of the files it was based on, and stops to re-check when an attested file changes.",
   "author": {
     "name": "Reply Intelligence Group",

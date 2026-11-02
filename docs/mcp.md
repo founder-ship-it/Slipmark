@@ -30,7 +30,7 @@ Action.
 **Claude Code**
 
 ```bash
-claude mcp add slipmark -- npx -y slipmark@0.6.1 mcp
+claude mcp add slipmark -- npx -y slipmark@0.6.2 mcp
 ```
 
 Or use the [Claude Code plugin](../claude-plugin/README.md), which adds skills
@@ -41,7 +41,7 @@ and a Stop hook as well.
 ```toml
 [mcp_servers.slipmark]
 command = "npx"
-args = ["-y", "slipmark@0.6.1", "mcp"]
+args = ["-y", "slipmark@0.6.2", "mcp"]
 ```
 
 **Cursor**, in `.cursor/mcp.json`:
@@ -49,7 +49,7 @@ args = ["-y", "slipmark@0.6.1", "mcp"]
 ```json
 {
   "mcpServers": {
-    "slipmark": { "command": "npx", "args": ["-y", "slipmark@0.6.1", "mcp"] }
+    "slipmark": { "command": "npx", "args": ["-y", "slipmark@0.6.2", "mcp"] }
   }
 }
 ```
@@ -59,7 +59,7 @@ args = ["-y", "slipmark@0.6.1", "mcp"]
 ```json
 {
   "servers": {
-    "slipmark": { "type": "stdio", "command": "npx", "args": ["-y", "slipmark@0.6.1", "mcp"] }
+    "slipmark": { "type": "stdio", "command": "npx", "args": ["-y", "slipmark@0.6.2", "mcp"] }
   }
 }
 ```
@@ -69,7 +69,7 @@ args = ["-y", "slipmark@0.6.1", "mcp"]
 ```json
 {
   "mcpServers": {
-    "slipmark": { "command": "npx", "args": ["-y", "slipmark@0.6.1", "mcp"] }
+    "slipmark": { "command": "npx", "args": ["-y", "slipmark@0.6.2", "mcp"] }
   }
 }
 ```

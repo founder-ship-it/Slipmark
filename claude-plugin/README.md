@@ -22,9 +22,9 @@ New to Slipmark in this repository? Run `/slipmark:setup`.
 
 | Part | What it does |
 | --- | --- |
-| `attest-verdicts` skill | Claude loads it when it gives a verdict, and records one with `npx slipmark@0.6.1 attest`. |
-| `/slipmark:verify` | Runs `npx slipmark@0.6.1 verify` and explains any refusal. |
-| `/slipmark:setup` | Shows, then runs, `npx slipmark@0.6.1 init` to add the workflow and agent instructions. |
+| `attest-verdicts` skill | Claude loads it when it gives a verdict, and records one with `npx slipmark@0.6.2 attest`. |
+| `/slipmark:verify` | Runs `npx slipmark@0.6.2 verify` and explains any refusal. |
+| `/slipmark:setup` | Shows, then runs, `npx slipmark@0.6.2 init` to add the workflow and agent instructions. |
 | Stop hook | After each response, if `.slipmark/attestations/` exists, re-checks the verdicts locally (no network). If a file changed after it was attested, Claude is asked once to re-read it and attest again. With `"context"` in `.slipmark/policy.json`, it also tells Claude when its own instructions (AGENTS.md, CLAUDE.md, skills, hooks, MCP config) changed after a verdict, and that a person has to approve that change. |
 
 ## What it runs, sends and stores
@@ -36,7 +36,7 @@ New to Slipmark in this repository? Run `/slipmark:setup`.
   repository (`npm run build:plugin`).
 - The hook does nothing in repositories without `.slipmark/attestations/`. It
   never blocks on an honest `fail` verdict and never blocks twice in a row.
-- The skills tell Claude to run the pinned npm package `slipmark@0.6.1` through
+- The skills tell Claude to run the pinned npm package `slipmark@0.6.2` through
   `npx` for `attest`, `verify` and `init`. Claude Code asks you before running
   each command unless you have allowed it. `npx` fetches the package from the
   npm registry the first time.

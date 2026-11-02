@@ -4,6 +4,8 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 
 ## [Unreleased]
 
+## [0.6.2] - 2026-11-02
+
 Follow-ups from the independent review of v0.5 (#14). None of these let a
 change through the gate.
 

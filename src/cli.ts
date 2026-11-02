@@ -19,7 +19,7 @@ import { runPack, repairArtifactsFor, repairIndexDoc, agentRulesDoc, claudeCodeC
 import type { GitContext, Pack } from "./types.js";
 import type { VerificationRun } from "./engine/runner.js";
 import type { DashboardData } from "./dashboard/data.js";
-import { createAttestation, writeAttestation, defaultAttestationPath, verifyWithSignatures, resolvePolicy, loadPolicy, POLICY_SCHEMA, type Policy, type PolicySource, type VerifyReport, type AttesterKind } from "./attest/attestation.js";
+import { createAttestation, writeAttestation, checkAttestationTarget, defaultAttestationPath, verifyWithSignatures, resolvePolicy, loadPolicy, POLICY_SCHEMA, type Policy, type PolicySource, type VerifyReport, type AttesterKind } from "./attest/attestation.js";
 import { signAttestation } from "./attest/signing.js";
 import { existsSync } from "node:fs";
 import { planInit, applyInit } from "./init.js";
@@ -221,7 +221,8 @@ function argVal(args: string[], flag: string, opts: { freeText?: boolean } = {})
   const i = args.indexOf(flag);
   if (i < 0) return null;
   const v = args[i + 1];
-  if (v === undefined || (!opts.freeText && v.startsWith("--"))) fail(`${flag} needs a value`);
+  // Free text may start with "--", but a bare flag ("--note --against b.ts") means the value is missing.
+  if (v === undefined || (opts.freeText ? /^--[a-z][a-z-]*$/.test(v) : v.startsWith("--"))) fail(`${flag} needs a value`);
   return v!;
 }
 
@@ -344,7 +345,12 @@ async function attestMain(args: string[]): Promise<void> {
   }
   const dir = resolve(argVal(args, "--dir") ?? ".slipmark/attestations");
   const out = argVal(args, "--out") ? resolve(argVal(args, "--out")!) : defaultAttestationPath(dir, att!);
-  writeAttestation(out, att!);
+  try {
+    checkAttestationTarget(out);
+    writeAttestation(out, att!);
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e));
+  }
   console.log(`\n  ${att.by} → "${att.verdict}" on ${att.subjects.length} file(s)`);
   for (const s of att.subjects) console.log(`    ${s.sha256.slice(0, 12)}  ${s.path}`);
   for (const a of att.against ?? []) console.log(`    ${a.sha256.slice(0, 12)}  ${a.path} (checked against)`);

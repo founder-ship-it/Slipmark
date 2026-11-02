@@ -38,7 +38,11 @@ gives the same answer every time.
 - `at` and `note` are informational. The gate never trusts them.
 
 Files live in `.slipmark/attestations/` by default, one JSON file each.
-Change it with `--dir`.
+Change it with `--dir`, or name one file with `--out`. Either must be inside
+the repository (the working folder, outside a repository), and `--out` must
+end in `.json`. If the file is already there, it must be an attestation:
+`attest` never overwrites a source file, a config file or anything else, so an
+agent talked into passing `--out package.json` gets exit 2, not a damaged file.
 
 ### Version 2 fields
 
@@ -155,8 +159,8 @@ A version 1 attestation is judged on version 1 fields only. Anything else in
 it is ignored.
 
 When an attestation fails on `against_changed`, `check_failed`,
-`model_not_allowed`, `context_changed` or any signature status, none of its subjects count. So `--require` and coverage
-report them as not covered too.
+`model_not_allowed`, `context_changed` or any signature status, none of its
+subjects count. So `--require` and coverage report them as not covered too.
 
 Exit code 2 means the command couldn't run. For `verify`: a malformed policy,
 a coverage base that isn't in the checkout or isn't a plain ref, coverage run
@@ -165,7 +169,8 @@ Sigstore unreachable, a `--policy-from` ref that isn't in the checkout, a
 policy on the base that isn't a regular file in a real folder, a subfolder run
 when only the repository root has a policy, or a flag given with no value.
 For `attest`: a passing verdict refused because a check failed, a missing or
-unreadable subject, or bad input.
+unreadable subject, an `--out` or `--dir` outside the repository, an `--out`
+that would replace something that isn't an attestation, or bad input.
 
 `--require` is how you stop the quiet failure where an agent simply never
 produces a verdict. List the files that must be covered and the gate refuses
@@ -181,17 +186,20 @@ slipmark verify --coverage diff --base origin/main --ignore "docs/**"
 (committed, staged, unstaged and untracked), and refuses any that no current,
 passing verdict covers. It computes the list itself and never reads it from an
 attestation. Coverage only runs from the repository root: from a subfolder it
-exits 2, because git would only report changes in that folder. Deleted files, submodules and `.slipmark/**` are left out. A
-changed file that can't be hashed, such as a link pointing outside the
-repository or to nothing, is refused as `invalid`, never skipped. A link to
-a folder is refused too, since a link is never treated as a submodule. The
+exits 2, because git would only report changes in that folder. Deleted files,
+submodules and `.slipmark/**` are left out. A changed file that can't be
+hashed, such as a link pointing outside the repository or to nothing, is
+refused as `invalid`, never skipped. A link to a folder is refused too, since
+a link is never treated as a submodule. The
 base must be the branch you merge into, such as `origin/main`. Anything
 starting with `-` is rejected, and so is `HEAD`, which would compare the
 branch with itself and cover nothing. Other names for the same commit (the
 current branch's own name, `HEAD~0`) are accepted, because on a push to `main`
-the base legitimately equals HEAD and nothing counts as changed. That is why
-coverage belongs on pull requests, where the base is the branch you merge
-into.
+the base legitimately equals HEAD and nothing counts as changed. On a pull
+request (`GITHUB_EVENT_NAME` of `pull_request` or `pull_request_target`) a base
+that resolves to the pull request's own commit would cover nothing, so
+`verify` exits 2 instead. That is why coverage belongs on pull requests, where
+the base is the branch you merge into.
 
 This closes the gap where an agent reviews 3 of 7 changed files and the other
 4 go through unreviewed.
@@ -251,9 +259,9 @@ coverage off. So when a base is known, the policy is read from there:
 2. Otherwise the base given with `--coverage diff --base <ref>` on the
    command line, then the pull request's base branch
    (`refs/remotes/origin/$GITHUB_BASE_REF` in GitHub Actions, which must exist
-   under exactly that name, so a tag can't stand in for it). The Action fetches the base branch for you
-   when the checkout doesn't have it. `coverage.base` inside the policy file is
-   not used to find the policy.
+   under exactly that name, so a tag can't stand in for it). The Action
+   fetches the base branch for you when the checkout doesn't have it.
+   `coverage.base` inside the policy file is not used to find the policy.
 3. Otherwise (a local run, a push build) the checkout's own policy, as in v0.4.
    If a base was expected but isn't in the checkout, the report says so and the
    checkout's policy is used.
@@ -261,9 +269,17 @@ coverage off. So when a base is known, the policy is read from there:
 Run from a subfolder (a package in a monorepo), `verify` reads that folder's
 `.slipmark/policy.json` from the base, just as it reads it from disk. If the
 folder has none but the repository root does, it exits 2 rather than skip the
-root's rules. A policy file on the base that isn't a regular file, or sits in a folder that
-isn't a real folder (a linked `.slipmark`, for example), is an error, never
-treated as "no policy".
+root's rules. A policy file on the base that isn't a regular file, or sits in
+a folder that isn't a real folder (a linked `.slipmark`, for example), is an
+error, never treated as "no policy".
+
+A folder's own policy replaces the root one. It doesn't add to it: the root's
+`require`, `models` and `signatures` don't apply to that run. That is for
+deliberate setups, such as a monorepo package with its own rules, and the
+report says so every time it happens. A pull request can't use this to escape
+the root's rules, because the policy is read from the base branch: if the
+folder's policy isn't there yet, the root's policy is found instead and the
+run exits 2, as above.
 
 A branch that changes, adds or deletes the policy gets a notice: the base
 policy is applied, and the change takes effect once it's merged. Every report

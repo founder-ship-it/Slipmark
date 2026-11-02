@@ -4,6 +4,31 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 
 ## [Unreleased]
 
+Follow-ups from the independent review of v0.5 (#14). None of these let a
+change through the gate.
+
+### Security
+- **`attest --out` and `--dir` stay inside the repository.** They could write
+  anywhere, so an agent talked into passing `--out ~/.bashrc` or
+  `--out package.json` would overwrite it with JSON. The target must now be a
+  `.json` file inside the repository, and anything already there must be an
+  attestation. Otherwise `attest` exits 2 and writes nothing.
+
+### Fixed
+- **`--note` followed by another flag** (`--note --against b.ts`) recorded the
+  flag as the note. A bare flag after `--note` is now a missing value. Notes
+  that merely start with `--` still work.
+- **On a pull request, a coverage base that is the pull request's own commit**
+  (`HEAD~0`, the branch's own name) would cover nothing. `verify` now exits 2
+  instead. On a push to main, where base and HEAD are the same, it still runs.
+
+### Changed
+- **A folder's own policy replacing the root one is now reported.** Running
+  from a subfolder with its own `.slipmark/policy.json` uses that policy only.
+  The report now says the root's policy wasn't read, and the docs explain the
+  rule. A pull request still can't add a folder policy to escape the root's.
+- Two long lines in docs/attestation.md are wrapped.
+
 ## [0.6.1] - 2026-10-30
 
 ### Added

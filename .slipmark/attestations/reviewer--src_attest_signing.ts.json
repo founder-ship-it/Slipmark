@@ -2,7 +2,7 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-10-25T18:44:45.834Z",
+  "at": "2026-11-02T11:45:12.557Z",
   "subjects": [
     {
       "path": "src/attest/signing.ts",
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "37e910537001430cc329cbc6b8f09e281bfc0a1eeec33f0bd73b7a4eeec410b4"
+      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
     }
   ],
-  "note": "Signing docs still match: canonical payload minus signature, which covers acknowledgedHidden; acknowledgements count only when signed by approverSigners"
+  "note": "File unchanged since its last pass; the doc changed only in the --out/--dir, exit-code, coverage-base and folder-policy sections and line wrapping, none of which describe this file, and its sections still match (spot-checked)."
 }

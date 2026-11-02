@@ -2,7 +2,7 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-10-25T18:46:35.967Z",
+  "at": "2026-11-02T11:45:12.358Z",
   "subjects": [
     {
       "path": "src/attest/context.ts",
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "37e910537001430cc329cbc6b8f09e281bfc0a1eeec33f0bd73b7a4eeec410b4"
+      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
     }
   ],
-  "note": "Pattern checks and the $ rule match the docs; the raw-HTML net uses maskCode, so a misread can slip past this layer, but the allow-list still refuses it (reproduced)"
+  "note": "File unchanged since its last pass; the doc changed only in the --out/--dir, exit-code, coverage-base and folder-policy sections and line wrapping, none of which describe this file, and its sections still match (spot-checked)."
 }

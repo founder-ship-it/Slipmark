@@ -483,6 +483,46 @@ export function defaultAttestationPath(dir: string, att: Attestation): string {
 }
 
 /**
+ * Where `slipmark attest --out/--dir` may write. An agent can be talked into
+ * passing these flags, so the target must be a .json file inside the repository
+ * (the working folder outside one), and anything already there must be an
+ * attestation: never a source file, a config file or something in a home folder.
+ */
+export function checkAttestationTarget(filePath: string): void {
+  const file = resolve(filePath);
+  const cwd = resolve(process.cwd());
+  if (!file.endsWith(".json")) throw new Error(`${relative(cwd, file) || file}: an attestation file must end in .json`);
+  let realTop: string;
+  try {
+    realTop = realpathSync(git(cwd, ["rev-parse", "--show-toplevel"]).trim());
+  } catch {
+    realTop = realpathSync(cwd);
+  }
+  // Check the nearest folder that exists, through any links (writeAttestation refuses links inside).
+  let a = dirname(file);
+  while (!existsSync(a) && dirname(a) !== a) a = dirname(a);
+  const real = realpathSync(a);
+  if (real !== realTop && !real.startsWith(realTop + sep)) {
+    throw new Error(`${file} is outside the repository (${realTop}): refusing to write an attestation there`);
+  }
+  let existing: ReturnType<typeof lstatSync> | undefined;
+  try {
+    existing = lstatSync(file);
+  } catch {
+    return; // nothing there yet
+  }
+  let schema: unknown;
+  try {
+    schema = existing.isFile() ? (JSON.parse(readFileSync(file, "utf8")) as { schema?: unknown })?.schema : undefined;
+  } catch {
+    schema = undefined;
+  }
+  if (schema !== ATTESTATION_SCHEMA && schema !== ATTESTATION_SCHEMA_V2) {
+    throw new Error(`${relative(cwd, file)} already exists and isn't an attestation: refusing to overwrite it`);
+  }
+}
+
+/**
  * Writes an attestation without following links. A pull request can commit a
  * link at an attestation's predictable name, or link `.slipmark/` elsewhere;
  * writing through either would put the file (or overwrite one) outside the
@@ -820,28 +860,56 @@ export function resolvePolicy(opts: { root?: string; from?: string; candidates?:
     return { policy, info };
   };
 
-  if (opts.from === "working-tree") return fromWorkingTree();
-  if (opts.from) return fromRef(opts.from);
-
-  const candidates = (opts.candidates ?? []).filter(Boolean);
-  for (const ref of candidates) {
-    let found = false;
+  // A folder's own policy replaces the root one rather than adding to it. That's for
+  // deliberate setups (a monorepo package), so say so in the report whenever it happens.
+  const noteShadowedRoot = (r: { policy: Policy | null; info: PolicySource }): { policy: Policy | null; info: PolicySource } => {
+    if (!r.policy) return r;
+    let top: string;
     try {
-      checkBase(ref, "policy base");
-      found = refExists(root, ref);
+      top = git(root, ["rev-parse", "--show-toplevel"]).trim();
     } catch {
-      found = false;
+      return r;
     }
-    if (found) return fromRef(ref);
-  }
-  if (candidates.length) {
-    const r = fromWorkingTree([
-      `The base branch (${candidates.join(" or ")}) isn't in this checkout, so the policy was read from this branch, which a pull request can edit. Fetch the base, or pass --policy-from <ref>.`,
-    ]);
-    r.info.baseMissing = candidates.join(" or ");
+    if (realpathSync(top) === realpathSync(root)) return r;
+    // Look where the policy came from: a branch that deletes the root policy must not hide this note.
+    const rootHasPolicy =
+      r.info.source === "base" && r.info.ref
+        ? spawnSync("git", ["cat-file", "-e", `${git(root, ["rev-parse", "--verify", "--quiet", `${r.info.ref}^{commit}`]).trim()}:${POLICY_FILE}`], { cwd: root, stdio: "ignore" }).status === 0
+        : existsSync(join(top, POLICY_FILE));
+    if (!rootHasPolicy) return r;
+    const here = toPosix(relative(top, root));
+    r.info.notes = [
+      ...(r.info.notes ?? []),
+      `The policy in ${here}/${POLICY_FILE} was used. The repository root's ${POLICY_FILE} was not read: a folder's own policy replaces the root one, it doesn't add to it.`,
+    ];
     return r;
+  };
+  return noteShadowedRoot(pickPolicy());
+
+  function pickPolicy(): { policy: Policy | null; info: PolicySource } {
+    if (opts.from === "working-tree") return fromWorkingTree();
+    if (opts.from) return fromRef(opts.from);
+
+    const candidates = (opts.candidates ?? []).filter(Boolean);
+    for (const ref of candidates) {
+      let found = false;
+      try {
+        checkBase(ref, "policy base");
+        found = refExists(root, ref);
+      } catch {
+        found = false;
+      }
+      if (found) return fromRef(ref);
+    }
+    if (candidates.length) {
+      const r = fromWorkingTree([
+        `The base branch (${candidates.join(" or ")}) isn't in this checkout, so the policy was read from this branch, which a pull request can edit. Fetch the base, or pass --policy-from <ref>.`,
+      ]);
+      r.info.baseMissing = candidates.join(" or ");
+      return r;
+    }
+    return fromWorkingTree();
   }
-  return fromWorkingTree();
 }
 
 /** A coverage base is a ref, never an option. `--independent` would silently make the merge base HEAD. */
@@ -884,6 +952,15 @@ export function changedFiles(root: string, base: string, what: string = "coverag
     throw new Error(
       `${what}: can't find the base "${base}" in this checkout. ` +
         `In GitHub Actions, use actions/checkout with fetch-depth: 0.`,
+    );
+  }
+  // HEAD~0 or the branch's own name is another way of writing HEAD. On a push to main
+  // that's expected (base == HEAD), but on a pull request it would cover nothing.
+  const event = process.env.GITHUB_EVENT_NAME;
+  if ((event === "pull_request" || event === "pull_request_target") && mergeBase === git(root, ["rev-parse", "HEAD"]).trim()) {
+    throw new Error(
+      `${what}: the base "${base}" is this pull request's own commit, so nothing would be covered. ` +
+        `Use the branch it merges into, such as origin/main.`,
     );
   }
   const split = (out: string) => out.split("\0").filter(Boolean);

@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-10-30T08:12:20.585Z",
+  "at": "2026-11-02T11:45:12.244Z",
   "subjects": [
     {
       "path": "src/attest/attestation.ts",
-      "sha256": "bdb8ef313489897d87ede395b591cdc90f468604bc33da4aabc44b624f28fd5c"
+      "sha256": "832f2f5cb96a3deb814ae5a6a8495b59aa7ec326dc306907b525c669765bf34b"
     }
   ],
   "agent": {
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "37e910537001430cc329cbc6b8f09e281bfc0a1eeec33f0bd73b7a4eeec410b4"
+      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
     }
   ],
-  "note": "Checked writeAttestation lstat-checks every folder below the outermost ancestor that resolves inside the repository before creating anything: linked .slipmark from root, from a subfolder, via an alias to the repo root or to a subfolder, a loop link and a leave-and-re-enter link are all refused with nothing written outside; legitimate --out outside the repo and alias paths still work; npm test 212/212."
+  "note": "Re-checked the v0.5 follow-ups: attest --out/--dir refused outside the repo via .., links, dangling links and non-attestation targets; --note bare flag; pull_request base==HEAD exits 2 while push still runs; shadowed-root note now read from the base ref (deleted-on-branch and added-on-branch cases, tag, sha, refs/heads, odd refs); npm test 219/219."
 }

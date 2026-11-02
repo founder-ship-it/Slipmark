@@ -517,6 +517,12 @@ function changedFiles(root, base, what = "coverage") {
       `${what}: can't find the base "${base}" in this checkout. In GitHub Actions, use actions/checkout with fetch-depth: 0.`
     );
   }
+  const event = process.env.GITHUB_EVENT_NAME;
+  if ((event === "pull_request" || event === "pull_request_target") && mergeBase === git(root, ["rev-parse", "HEAD"]).trim()) {
+    throw new Error(
+      `${what}: the base "${base}" is this pull request's own commit, so nothing would be covered. Use the branch it merges into, such as origin/main.`
+    );
+  }
   const split = (out2) => out2.split("\0").filter(Boolean);
   const changed = split(git(root, ["diff", "--name-only", "-z", "--relative", "--diff-filter=d", mergeBase, "--"]));
   const untracked = split(git(root, ["ls-files", "--others", "--exclude-standard", "-z"]));

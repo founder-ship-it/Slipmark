@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-10-30T08:12:20.671Z",
+  "at": "2026-11-02T11:45:12.302Z",
   "subjects": [
     {
       "path": "docs/attestation.md",
-      "sha256": "37e910537001430cc329cbc6b8f09e281bfc0a1eeec33f0bd73b7a4eeec410b4"
+      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
     }
   ],
   "agent": {
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "src/attest/attestation.ts",
-      "sha256": "bdb8ef313489897d87ede395b591cdc90f468604bc33da4aabc44b624f28fd5c"
+      "sha256": "832f2f5cb96a3deb814ae5a6a8495b59aa7ec326dc306907b525c669765bf34b"
     }
   ],
-  "note": "Doc is byte-identical to main and still accurate against the changed attestation.ts: its writeAttestation example works, @1 schema without v2 options, failed --run exits 2 writing nothing, verify exits 1 on a changed file; it makes no write-safety claim the code contradicts."
+  "note": "Every claim in the changed sections holds against the code: --out/--dir limits and .json rule, the new attest exit-2 cases, the pull_request base rule, and the folder-policy-replaces-root rule with its report note, reproduced by hand."
 }

@@ -30,7 +30,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test": "tsc -p tsconfig.json && node --test dist/test/*.test.js",
+    "test": "tsc -p tsconfig.json && env -u GITHUB_EVENT_NAME node --test dist/test/*.test.js",
     "demo": "tsc -p tsconfig.json && node dist/src/cli.js dist/packs/demo-shop/pack.js --git packs/demo-shop/git-context.example.json --prompts",
     "dashboard:sample": "tsc -p tsconfig.json && node dist/src/cli.js dashboard --from dashboard/sample-history.json --out dashboard/sample.html",
     "demo:verify": "tsc -p tsconfig.json && node dist/src/cli.js verify --dir examples/attestation/attestations",

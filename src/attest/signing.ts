@@ -12,11 +12,21 @@
  * canonical JSON (keys sorted, no whitespace), in a DSSE envelope with payload
  * type PAYLOAD_TYPE. Change one byte of the verdict, a hash or a note and the
  * signature no longer matches.
+ *
+ * With `format: "intoto"` the envelope instead carries an in-toto Statement v1
+ * (payload type INTOTO_PAYLOAD_TYPE): the attested files and their SHA-256 as
+ * `subject`, and the same unsigned attestation as the predicate. Any in-toto
+ * tool can read it, and the envelope can be lifted into an in-toto Bundle.
  */
 import { X509Certificate } from "node:crypto";
 import type { Attestation } from "./attestation.js";
 
 export const PAYLOAD_TYPE = "application/vnd.slipmark.attestation+json";
+export const INTOTO_PAYLOAD_TYPE = "application/vnd.in-toto+json";
+export const STATEMENT_TYPE = "https://in-toto.io/Statement/v1";
+/** Identifies a Slipmark verdict as an in-toto predicate. The predicate is the attestation without its `signature`. */
+export const PREDICATE_TYPE = "https://github.com/founder-ship-it/Slipmark/attestation/v1";
+export type SignFormat = "slipmark" | "intoto";
 export const GITHUB_ACTIONS_ISSUER = "https://token.actions.githubusercontent.com";
 
 /** A Sigstore bundle as JSON (sigstore's SerializedBundle). Kept loose so the gate has no type dependency on it. */
@@ -70,6 +80,23 @@ export function signedPayload(att: Attestation | Record<string, unknown>): Buffe
   return Buffer.from(canonicalJson(rest), "utf8");
 }
 
+/** The in-toto Statement for an attestation: its subjects as resource descriptors, the attestation itself as the predicate. */
+export function toStatement(att: Attestation | Record<string, unknown>): Record<string, unknown> {
+  const predicate = JSON.parse(signedPayload(att).toString("utf8")) as Record<string, unknown>;
+  const subjects = (predicate.subjects as { path: string; sha256: string }[] | undefined) ?? [];
+  return {
+    _type: STATEMENT_TYPE,
+    subject: subjects.map((s) => ({ name: s.path, digest: { sha256: s.sha256 } })),
+    predicateType: PREDICATE_TYPE,
+    predicate,
+  };
+}
+
+/** The exact bytes an in-toto signature covers: the canonical Statement. */
+export function statementPayload(att: Attestation | Record<string, unknown>): Buffer {
+  return Buffer.from(canonicalJson(toStatement(att)), "utf8");
+}
+
 /** `*` matches any run of characters; everything else is literal. Whole-string match. */
 export function identityMatches(identity: string, pattern: string): boolean {
   const re = new RegExp(`^${pattern.split("*").map((p) => p.replace(/[.+?^${}()|[\]\\]/g, "\\$&")).join(".*")}$`);
@@ -90,7 +117,7 @@ export function bundleIdentity(bundle: SigstoreBundle): string | null {
 }
 
 /** Sign an attestation where it was made. Keyless: in GitHub Actions the job's identity is used (needs `id-token: write`). */
-export async function signAttestation(att: Attestation, opts: { identityToken?: string } = {}): Promise<Attestation & { signature: AttestationSignature }> {
+export async function signAttestation(att: Attestation, opts: { identityToken?: string; format?: SignFormat } = {}): Promise<Attestation & { signature: AttestationSignature }> {
   const { signature: _old, ...unsigned } = att as Attestation & { signature?: unknown };
   let sigstore: typeof import("sigstore");
   try {
@@ -104,7 +131,9 @@ export async function signAttestation(att: Attestation, opts: { identityToken?: 
       "--sign needs an identity to sign with. Run it in a GitHub Actions job with `permissions: id-token: write`, or set SIGSTORE_ID_TOKEN.",
     );
   }
-  const bundle = (await sigstore.attest(signedPayload(unsigned as Attestation), PAYLOAD_TYPE, identityToken ? { identityToken } : {})) as unknown as SigstoreBundle;
+  const intoto = opts.format === "intoto";
+  const payload = intoto ? statementPayload(unsigned as Attestation) : signedPayload(unsigned as Attestation);
+  const bundle = (await sigstore.attest(payload, intoto ? INTOTO_PAYLOAD_TYPE : PAYLOAD_TYPE, identityToken ? { identityToken } : {})) as unknown as SigstoreBundle;
   return { ...(unsigned as Attestation), signature: { bundle } };
 }
 
@@ -125,8 +154,13 @@ export async function checkSignature(att: Record<string, unknown>, policy: Signa
   const bundle = sig?.bundle;
   const env = bundle?.dsseEnvelope;
   if (!bundle || !env) return { state: "invalid", reason: "signature has no Sigstore DSSE bundle" };
-  if (env.payloadType !== PAYLOAD_TYPE) return { state: "invalid", reason: `signed payload type is ${env.payloadType}, not a Slipmark attestation` };
-  if (!Buffer.from(env.payload, "base64").equals(signedPayload(att))) {
+  // Either form must cover exactly this attestation, byte for byte in canonical form. A Statement
+  // whose subjects or predicate differ from the attestation, however slightly, doesn't count.
+  let expected: Buffer;
+  if (env.payloadType === PAYLOAD_TYPE) expected = signedPayload(att);
+  else if (env.payloadType === INTOTO_PAYLOAD_TYPE) expected = statementPayload(att);
+  else return { state: "invalid", reason: `signed payload type is ${env.payloadType}, not a Slipmark attestation` };
+  if (!Buffer.from(env.payload, "base64").equals(expected)) {
     return { state: "invalid", reason: "the signature is for different content: the attestation was changed after it was signed" };
   }
   const issuer = policy?.issuer ?? GITHUB_ACTIONS_ISSUER;
@@ -144,4 +178,22 @@ export async function checkSignature(att: Record<string, unknown>, policy: Signa
   if (!identity) return { state: "invalid", reason: "signing certificate names no identity" };
   const trusted = !policy?.trusted?.length || policy.trusted.some((p) => identityMatches(identity, p));
   return { state: "valid", identity, issuer, trusted };
+}
+
+/**
+ * In-toto Bundle lines (JSON Lines, one DSSE envelope each) for the attestations signed as
+ * in-toto Statements. Attestations signed in Slipmark's own format, or unsigned, are skipped and
+ * named, since an in-toto consumer couldn't read them. The Bundle isn't signed as a whole: a
+ * consumer must require each entry it needs by predicate type and signer.
+ */
+export function intotoBundleLines(atts: { file: string; att: Record<string, unknown> }[]): { lines: string[]; skipped: { file: string; reason: string }[] } {
+  const lines: string[] = [];
+  const skipped: { file: string; reason: string }[] = [];
+  for (const { file, att } of atts) {
+    const env = (att.signature as AttestationSignature | undefined)?.bundle?.dsseEnvelope;
+    if (!env) skipped.push({ file, reason: "not signed" });
+    else if (env.payloadType !== INTOTO_PAYLOAD_TYPE) skipped.push({ file, reason: "signed in Slipmark's own format; re-attest with --sign-format intoto" });
+    else lines.push(canonicalJson({ payload: env.payload, payloadType: env.payloadType, signatures: env.signatures }));
+  }
+  return { lines, skipped };
 }

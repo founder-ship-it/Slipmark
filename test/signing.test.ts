@@ -4,7 +4,7 @@ import { mkdtempSync, writeFileSync, mkdirSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createAttestation, writeAttestation, verifyAttestations, verifyWithSignatures, loadPolicy, POLICY_SCHEMA, type Attestation, type Policy } from "../src/attest/attestation.js";
-import { canonicalJson, signedPayload, identityMatches, bundleIdentity, checkSignature, PAYLOAD_TYPE, type SigstoreBundle } from "../src/attest/signing.js";
+import { canonicalJson, signedPayload, identityMatches, bundleIdentity, checkSignature, PAYLOAD_TYPE, INTOTO_PAYLOAD_TYPE, STATEMENT_TYPE, PREDICATE_TYPE, toStatement, statementPayload, intotoBundleLines, type SigstoreBundle } from "../src/attest/signing.js";
 
 // A self-signed test certificate whose identity is a GitHub Actions workflow, like a Fulcio one.
 const CERT = "MIIB3zCCAYagAwIBAgIUSPpWcekJELfhZH8iwkTATDkRd6cwCgYIKoZIzj0EAwIwFzEVMBMGA1UECgwMc2lnc3RvcmUuZGV2MB4XDTI2MTAyMzExNDgxOFoXDTM2MTAyMDExNDgxOFowFzEVMBMGA1UECgwMc2lnc3RvcmUuZGV2MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEctevYiqooE/4lI3dsRVR+L1Bi08svreWTmW9UG/LKGx7owo1wFlC50vsKnt7+gh0aYjAkwTir/RN2b4VeTAWiqOBrzCBrDAdBgNVHQ4EFgQUsEyxTSpdrOqZkLAsZXrjzZATpYcwHwYDVR0jBBgwFoAUsEyxTSpdrOqZkLAsZXrjzZATpYcwDwYDVR0TAQH/BAUwAwEB/zBZBgNVHREEUjBQhk5odHRwczovL2dpdGh1Yi5jb20vYWNtZS9hcGkvLmdpdGh1Yi93b3JrZmxvd3MvYWdlbnQtcmV2aWV3LnltbEByZWZzL2hlYWRzL21haW4wCgYIKoZIzj0EAwIDRwAwRAIgeyDaMlv9QSLmSS9MhtFHYrl4LtUVV2iHlrAEb4PQDvgCIB6T2m7z3cGDui1u9scVyj2L1e0Oo6zA+JtAd1R2gIj0";
@@ -165,4 +165,92 @@ test("real signature: the envelope covers exactly this attestation", async () =>
   const r = await checkSignature(REAL, { trusted: [REAL_ID] }, ok);
   assert.deepEqual(r, { state: "valid", identity: REAL_ID, issuer: "https://token.actions.githubusercontent.com", trusted: true });
   assert.equal((await checkSignature({ ...REAL, verdict: "cleared" }, undefined, ok)).state, "invalid");
+});
+
+// --- in-toto Statement signing ---
+
+/** Sign the way sigstore.attest does with --sign-format intoto: a DSSE envelope over the canonical Statement. */
+function fakeSignStatement(att: Attestation, payload = statementPayload(att)): Attestation {
+  const bundle: SigstoreBundle = {
+    mediaType: "application/vnd.dev.sigstore.bundle.v0.3+json",
+    verificationMaterial: { certificate: { rawBytes: CERT } },
+    dsseEnvelope: { payload: payload.toString("base64"), payloadType: INTOTO_PAYLOAD_TYPE, signatures: [{ sig: "c2ln" }] },
+  };
+  return { ...att, signature: { bundle } };
+}
+
+function statementAttest(root: string, file = "security-reviewer.json") {
+  const att = fakeSignStatement(createAttestation({ root, by: "security-reviewer", verdict: "pass", subjects: ["src/pay.ts"], now: new Date("2026-10-23T10:00:00Z") }));
+  writeAttestation(join(root, DIR, file), att);
+  return att;
+}
+
+test("in-toto: the Statement names each attested file as a subject and carries the verdict as its predicate", () => {
+  const root = repo();
+  const att = createAttestation({ root, by: "security-reviewer", verdict: "pass", subjects: ["src/pay.ts"], now: new Date("2026-10-23T10:00:00Z") });
+  const st = toStatement({ ...att, signature: { bundle: {} } }) as { _type: string; subject: { name: string; digest: { sha256: string } }[]; predicateType: string; predicate: Record<string, unknown> };
+  assert.equal(st._type, STATEMENT_TYPE);
+  assert.equal(st.predicateType, PREDICATE_TYPE);
+  assert.deepEqual(st.subject, [{ name: "src/pay.ts", digest: { sha256: att.subjects[0]!.sha256 } }]);
+  assert.equal(st.predicate.verdict, "pass");
+  assert.equal("signature" in st.predicate, false);
+});
+
+test("in-toto: a Statement-signed verdict passes the gate from a trusted workflow", async () => {
+  const root = repo();
+  statementAttest(root);
+  const report = await verifyWithSignatures({ root, policy: policy({ require: true, trusted: [WORKFLOW] }), verify: ok });
+  assert.equal(report.ok, true);
+  assert.equal(report.results[0]!.signer, WORKFLOW);
+});
+
+test("in-toto: editing the attestation after signing breaks the Statement signature", async () => {
+  const root = repo();
+  const att = statementAttest(root);
+  writeFileSync(join(root, DIR, "security-reviewer.json"), JSON.stringify({ ...att, note: "added after signing" }, null, 2));
+  const report = await verifyWithSignatures({ root, policy: null, verify: ok });
+  assert.equal(report.results[0]!.status, "signature_invalid");
+});
+
+test("in-toto: a Statement whose subject digest differs from the attestation is invalid", async () => {
+  const root = repo();
+  const att = createAttestation({ root, by: "security-reviewer", verdict: "pass", subjects: ["src/pay.ts"], now: new Date("2026-10-23T10:00:00Z") });
+  const st = toStatement(att) as { subject: { digest: { sha256: string } }[] };
+  st.subject[0]!.digest.sha256 = "0".repeat(64);
+  const signed = fakeSignStatement(att, Buffer.from(canonicalJson(st)));
+  assert.equal((await checkSignature(signed as unknown as Record<string, unknown>, undefined, ok)).state, "invalid");
+});
+
+test("in-toto: a Slipmark-format payload labelled as in-toto is invalid", async () => {
+  const root = repo();
+  const att = createAttestation({ root, by: "security-reviewer", verdict: "pass", subjects: ["src/pay.ts"], now: new Date("2026-10-23T10:00:00Z") });
+  const signed = fakeSignStatement(att, signedPayload(att));
+  assert.equal((await checkSignature(signed as unknown as Record<string, unknown>, undefined, ok)).state, "invalid");
+});
+
+test("in-toto: an unknown payload type is invalid", async () => {
+  const root = repo();
+  const att = attest(root, true) as unknown as { signature: { bundle: SigstoreBundle } };
+  att.signature.bundle.dsseEnvelope!.payloadType = "application/json";
+  assert.equal((await checkSignature(att as unknown as Record<string, unknown>, undefined, ok)).state, "invalid");
+});
+
+test("in-toto Bundle: one envelope line per Statement-signed verdict, others skipped and named", () => {
+  const root = repo();
+  const a = statementAttest(root, "a.json") as unknown as Record<string, unknown>;
+  const b = attest(root, true, "b.json") as unknown as Record<string, unknown>;
+  const c = attest(root, false, "c.json") as unknown as Record<string, unknown>;
+  const { lines, skipped } = intotoBundleLines([{ file: "a.json", att: a }, { file: "b.json", att: b }, { file: "c.json", att: c }]);
+  assert.equal(lines.length, 1);
+  const env = JSON.parse(lines[0]!) as { payloadType: string; payload: string; signatures: unknown[] };
+  assert.equal(env.payloadType, INTOTO_PAYLOAD_TYPE);
+  assert.equal(JSON.parse(Buffer.from(env.payload, "base64").toString()).predicateType, PREDICATE_TYPE);
+  assert.deepEqual(skipped.map((s) => s.file), ["b.json", "c.json"]);
+});
+
+test("the existing Slipmark-format envelope still verifies", async () => {
+  const root = repo();
+  attest(root, true);
+  const report = await verifyWithSignatures({ root, policy: policy({ require: true, trusted: [WORKFLOW] }), verify: ok });
+  assert.equal(report.ok, true);
 });

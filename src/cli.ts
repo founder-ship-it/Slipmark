@@ -20,7 +20,8 @@ import type { GitContext, Pack } from "./types.js";
 import type { VerificationRun } from "./engine/runner.js";
 import type { DashboardData } from "./dashboard/data.js";
 import { createAttestation, writeAttestation, checkAttestationTarget, defaultAttestationPath, verifyWithSignatures, resolvePolicy, loadPolicy, POLICY_SCHEMA, type Policy, type PolicySource, type VerifyReport, type AttesterKind } from "./attest/attestation.js";
-import { signAttestation } from "./attest/signing.js";
+import { signAttestation, intotoBundleLines, type SignFormat } from "./attest/signing.js";
+import { listAttestationFiles } from "./attest/attestation.js";
 import { existsSync } from "node:fs";
 import { planInit, applyInit } from "./init.js";
 import { uploadRun, summaryMarkdown } from "./cloud/upload.js";
@@ -42,6 +43,7 @@ Usage
   slipmark init                 Wire Slipmark into this repo (workflow + agent instructions)
   slipmark attest ...           Record a verdict bound to the SHA-256 of the files it covers
   slipmark verify               Refuse if any verdict is about different files from these
+  slipmark export-intoto        Write signed verdicts as an in-toto Bundle (.intoto.jsonl)
   slipmark mcp [--root <dir>]   Serve attest and verify as MCP tools on stdio (Codex, Cursor, Copilot, Claude, Gemini)
   slipmark upload               Record this CI run in Slipmark Cloud (GitHub Actions, id-token: write)
   slipmark <pack>               Run drift diagnosis locks
@@ -56,6 +58,8 @@ attest
   [--model <name>] [--harness <name>] [--kind agent|tool|human]
   [--note "..."] [--dir .slipmark/attestations] [--out <file>]
   [--sign]                   sign it with this job's identity (GitHub Actions, id-token: write)
+  [--sign-format slipmark|intoto]  what to sign: Slipmark's own attestation (default) or an
+                             in-toto Statement v1 that any in-toto tool can read. Implies --sign
   [--acknowledge-hidden]     approver: you've read text in these files that GitHub hides
                              (comments, link definitions, images) and accept it
   [--context | --no-context] record the agent's context (AGENTS.md, CLAUDE.md, skills, MCP
@@ -72,6 +76,11 @@ verify
   [--no-policy]              ignore .slipmark/policy.json
   Exit 0: every verdict matches the files as they are now. Exit 1: refused.
   Exit 2: could not run (bad input, or the coverage base is missing).
+
+export-intoto
+  [--dir .slipmark/attestations] [--out <file.intoto.jsonl>]
+  One DSSE envelope per line, for verdicts signed with --sign-format intoto. Others are
+  skipped and listed. Writes to stdout without --out.
 
 upload
   [--dir .slipmark/attestations] [--require <file>...] [--url <ingest url>] [--strict]
@@ -336,9 +345,11 @@ async function attestMain(args: string[]): Promise<void> {
   } catch (e) {
     fail(e instanceof Error ? e.message : String(e));
   }
-  if (args.includes("--sign")) {
+  const signFormat = argVal(args, "--sign-format");
+  if (signFormat !== null && signFormat !== "slipmark" && signFormat !== "intoto") fail("--sign-format takes slipmark or intoto");
+  if (args.includes("--sign") || signFormat) {
     try {
-      att = await signAttestation(att!);
+      att = await signAttestation(att!, { format: (signFormat ?? "slipmark") as SignFormat });
     } catch (e) {
       fail(`couldn't sign: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -356,8 +367,32 @@ async function attestMain(args: string[]): Promise<void> {
   for (const a of att.against ?? []) console.log(`    ${a.sha256.slice(0, 12)}  ${a.path} (checked against)`);
   for (const c of att.checks ?? []) console.log(`    ${c.witnessed ? "ran" : "claimed"}: ${c.command} → exit ${c.exitCode}`);
   if (att.context) console.log(`    agent context: ${att.context.length} file(s)${att.context.length ? ` (${att.context.map((c) => c.path).slice(0, 4).join(", ")}${att.context.length > 4 ? ", ..." : ""})` : ""}`);
-  if (att!.signature) console.log("    signed: Sigstore bundle with this job's identity, logged in Rekor");
+  if (att!.signature) console.log(`    signed${signFormat === "intoto" ? " as an in-toto Statement" : ""}: Sigstore bundle with this job's identity, logged in Rekor`);
   console.log(`  written → ${relative(process.cwd(), out)}\n`);
+}
+
+/** `slipmark export-intoto [--dir d] [--out f]`: signed in-toto verdicts as an in-toto Bundle. */
+function exportIntotoMain(args: string[]): void {
+  const dir = resolve(argVal(args, "--dir") ?? ".slipmark/attestations");
+  const atts: { file: string; att: Record<string, unknown> }[] = [];
+  for (const f of listAttestationFiles(dir)) {
+    try {
+      atts.push({ file: relative(process.cwd(), f), att: JSON.parse(readFileSync(f, "utf8")) as Record<string, unknown> });
+    } catch {
+      console.error(`  skipped ${relative(process.cwd(), f)}: not valid JSON`);
+    }
+  }
+  const { lines, skipped } = intotoBundleLines(atts);
+  for (const s of skipped) console.error(`  skipped ${s.file}: ${s.reason}`);
+  const text = lines.length ? `${lines.join("\n")}\n` : "";
+  const outArg = argVal(args, "--out");
+  if (outArg) {
+    const out = resolve(outArg);
+    if (!out.endsWith(".jsonl")) fail("--out must be a .jsonl file, for example verdicts.intoto.jsonl");
+    writeFileSync(out, text);
+    console.error(`  ${lines.length} envelope(s) → ${relative(process.cwd(), out)}`);
+  } else process.stdout.write(text);
+  if (!lines.length) process.exitCode = 1;
 }
 
 /** `slipmark verify [--dir d] [--require <file>...] [--json]` */
@@ -434,6 +469,10 @@ async function main() {
   }
   if (args[0] === "verify") {
     await verifyMain(args.slice(1));
+    return;
+  }
+  if (args[0] === "export-intoto") {
+    exportIntotoMain(args.slice(1));
     return;
   }
   if (args[0] === "dashboard") {

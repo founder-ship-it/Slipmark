@@ -266,3 +266,19 @@ test("real in-toto signature: the envelope is a Statement covering exactly this 
   assert.deepEqual(await checkSignature(real, { trusted: [REAL_ID] }, ok), { state: "valid", identity: REAL_ID, issuer: "https://token.actions.githubusercontent.com", trusted: true });
   assert.equal((await checkSignature({ ...real, verdict: "cleared" }, undefined, ok)).state, "invalid");
 });
+
+test("in-toto: malformed subjects are invalid, not a crash", async () => {
+  for (const subjects of ["src/pay.ts", 5, [null], [{ path: "src/pay.ts" }], null]) {
+    const att = { schema: "slipmark/attestation@1", by: "r", verdict: "pass", at: "2026-10-23T10:00:00.000Z", subjects, signature: { bundle: { verificationMaterial: { certificate: { rawBytes: CERT } }, dsseEnvelope: { payload: "e30=", payloadType: INTOTO_PAYLOAD_TYPE, signatures: [{ sig: "c2ln" }] } } } };
+    assert.equal((await checkSignature(att, undefined, ok)).state, "invalid");
+  }
+});
+
+test("in-toto: one malformed file is refused and the gate still runs over the rest", async () => {
+  const root = repo();
+  attest(root, false, "good.json");
+  writeFileSync(join(root, DIR, "bad.json"), JSON.stringify({ schema: "slipmark/attestation@1", by: "r", verdict: "pass", at: "2026-10-23T10:00:00.000Z", subjects: "src/pay.ts", signature: { bundle: { dsseEnvelope: { payload: "e30=", payloadType: INTOTO_PAYLOAD_TYPE, signatures: [] } } } }));
+  const report = await verifyWithSignatures({ root, policy: null, verify: ok });
+  assert.equal(report.ok, false);
+  assert.ok(report.results.some((r) => r.status === "verified"));
+});

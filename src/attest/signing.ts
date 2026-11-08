@@ -158,8 +158,14 @@ export async function checkSignature(att: Record<string, unknown>, policy: Signa
   // whose subjects or predicate differ from the attestation, however slightly, doesn't count.
   let expected: Buffer;
   if (env.payloadType === PAYLOAD_TYPE) expected = signedPayload(att);
-  else if (env.payloadType === INTOTO_PAYLOAD_TYPE) expected = statementPayload(att);
-  else return { state: "invalid", reason: `signed payload type is ${env.payloadType}, not a Slipmark attestation` };
+  else if (env.payloadType === INTOTO_PAYLOAD_TYPE) {
+    // Attestation files are untrusted input: a malformed one is invalid, never a crash of the whole gate.
+    const subjects = att.subjects;
+    if (!Array.isArray(subjects) || !subjects.every((s) => s !== null && typeof s === "object" && typeof (s as { path?: unknown }).path === "string" && typeof (s as { sha256?: unknown }).sha256 === "string")) {
+      return { state: "invalid", reason: "attestation subjects aren't a list of files with hashes, so no Statement can match them" };
+    }
+    expected = statementPayload(att);
+  } else return { state: "invalid", reason: `signed payload type is ${env.payloadType}, not a Slipmark attestation` };
   if (!Buffer.from(env.payload, "base64").equals(expected)) {
     return { state: "invalid", reason: "the signature is for different content: the attestation was changed after it was signed" };
   }

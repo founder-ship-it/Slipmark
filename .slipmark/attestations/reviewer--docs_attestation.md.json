@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-02T11:45:12.302Z",
+  "at": "2026-11-08T08:49:16.981Z",
   "subjects": [
     {
       "path": "docs/attestation.md",
-      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
+      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
     }
   ],
   "agent": {
@@ -16,7 +16,11 @@
     {
       "path": "src/attest/attestation.ts",
       "sha256": "832f2f5cb96a3deb814ae5a6a8495b59aa7ec326dc306907b525c669765bf34b"
+    },
+    {
+      "path": "src/attest/signing.ts",
+      "sha256": "d3131a0588f05265732dc4aace8af9bdf9de1cde18fe3560e6c5ea3e9828985f"
     }
   ],
-  "note": "Every claim in the changed sections holds against the code: --out/--dir limits and .json rule, the new attest exit-2 cases, the pull_request base rule, and the folder-policy-replaces-root rule with its report note, reproduced by hand."
+  "note": "The doc change only adds two sections, and each claim in them matches the code: --sign-format intoto implies --sign; the payload types, the Statement shape and predicateType are as shown; the predicate is the attestation without signature; verify treats both formats alike, including refusing malformed input as invalid; export writes one envelope per line, skips and lists other and malformed attestations, and copies envelopes without verifying them. Nothing else in the doc changed, so it still matches attestation.ts."
 }

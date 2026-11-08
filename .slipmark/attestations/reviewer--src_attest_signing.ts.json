@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-02T11:45:12.557Z",
+  "at": "2026-11-08T08:49:16.910Z",
   "subjects": [
     {
       "path": "src/attest/signing.ts",
-      "sha256": "aeefb8706f106dc0ddfcea6b6f3bba1dff9a49c4c572ab8a0b9113803578ae42"
+      "sha256": "d3131a0588f05265732dc4aace8af9bdf9de1cde18fe3560e6c5ea3e9828985f"
     }
   ],
   "agent": {
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
+      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
     }
   ],
-  "note": "File unchanged since its last pass; the doc changed only in the --out/--dir, exit-code, coverage-base and folder-policy sections and line wrapping, none of which describe this file, and its sections still match (spot-checked)."
+  "note": "Reviewed in-toto signing: the Statement's predicate is the whole unsigned attestation and checkSignature compares it byte for byte, so editing verdict, note, subjects, against, context or checks breaks it; payload types can't be swapped (expected bytes follow the declared type, unknown types refused). Malformed subjects, a non-string payload and broken signature/bundle/envelope shapes are invalid (exit 1, file named, rest still verified), never a crash; the Slipmark-format path is unchanged. intotoBundleLines skips and names non-objects, unsigned, malformed envelopes and Slipmark-format verdicts, and writes one canonical DSSE envelope per line. npm test 231 pass, 1 skipped (fixture not yet made)."
 }

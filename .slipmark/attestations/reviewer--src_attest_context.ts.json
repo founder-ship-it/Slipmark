@@ -2,7 +2,7 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-02T11:45:12.358Z",
+  "at": "2026-11-08T08:49:17.088Z",
   "subjects": [
     {
       "path": "src/attest/context.ts",
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "90b47aecb9f09350e5c1b1266cb348beb655a9831cc8574105b3cf766f9f1289"
+      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
     }
   ],
-  "note": "File unchanged since its last pass; the doc changed only in the --out/--dir, exit-code, coverage-base and folder-policy sections and line wrapping, none of which describe this file, and its sections still match (spot-checked)."
+  "note": "File unchanged on this branch (git diff origin/main...HEAD empty for it); the doc change only adds two sections under Signed verdicts (in-toto signing; exporting an in-toto Bundle, including skipping malformed attestations and not checking signatures), none of which describe this file; its sections still match."
 }

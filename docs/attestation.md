@@ -545,6 +545,53 @@ Signing uses Sigstore's public service, so the signing certificate, which names
 the repository and workflow, is published in Rekor. Don't sign in a private
 repository whose name is itself confidential.
 
+### Signing an in-toto Statement
+
+By default `--sign` signs Slipmark's own attestation, payload type
+`application/vnd.slipmark.attestation+json`. Tools that expect an
+[in-toto Statement](https://github.com/in-toto/attestation/blob/main/spec/v1/statement.md)
+can't read that. `--sign-format intoto` signs a Statement instead:
+
+```bash
+slipmark attest --by security-reviewer --verdict pass \
+  --subject src/auth/session.ts --sign-format intoto
+```
+
+```json
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [{ "name": "src/auth/session.ts", "digest": { "sha256": "<64 hex>" } }],
+  "predicateType": "https://github.com/founder-ship-it/Slipmark/attestation/v1",
+  "predicate": { "schema": "slipmark/attestation@2", "by": "security-reviewer", "verdict": "pass", "...": "..." }
+}
+```
+
+The subjects are the attested files. The predicate is the whole attestation
+without its `signature`, so `against`, `checks` and `context` are covered too.
+The Statement is signed as canonical JSON with payload type
+`application/vnd.in-toto+json`. `verify` treats both formats the same way: the
+signed bytes must equal the Statement rebuilt from the attestation as it is now,
+so a changed hash, verdict or note breaks it.
+
+### Exporting an in-toto Bundle
+
+```bash
+slipmark export-intoto --out verdicts.intoto.jsonl
+```
+
+writes one DSSE envelope per line for every verdict signed with
+`--sign-format intoto`, in the
+[in-toto Bundle](https://github.com/in-toto/attestation/blob/main/spec/v1/bundle.md)
+format. Other attestations, and malformed ones, are skipped and listed.
+Envelopes from other tools can sit in the same file.
+
+Export copies the envelopes as they are and doesn't check their signatures:
+each envelope stands on its own, and whoever reads the Bundle verifies it.
+
+The Bundle isn't signed as a whole, so a consumer has to require each entry it
+needs by predicate type and signer, and check each entry's subjects against the
+change. A missing entry is a refusal, never a pass.
+
 ## Why the gate checks content, not branches
 
 The incident behind this feature: a final verification job checked out the

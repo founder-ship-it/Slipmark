@@ -1,4 +1,4 @@
-# Makes test/fixtures/signed-attestation.json: a real verdict signed by this
+# Makes test/fixtures/signed-attestation.json and signed-intoto-attestation.json: real verdicts signed by this
 # workflow through Sigstore, so the tests can check a genuine Fulcio certificate
 # and DSSE envelope without the network. Runs by hand, or when this file changes.
 name: Signed fixture
@@ -29,12 +29,16 @@ jobs:
           work=$(mktemp -d)
           mkdir -p "$work/src"
           printf 'export const fee = 2;\n' > "$work/src/pay.ts"
-          (cd "$work" && node "$GITHUB_WORKSPACE/dist/src/cli.js" attest --by security-reviewer --verdict pass --subject src/pay.ts --note "Signed fixture" --sign --out "$GITHUB_WORKSPACE/test/fixtures/signed-attestation.json")
+          git -C "$work" init -q
+          (cd "$work" && node "$GITHUB_WORKSPACE/dist/src/cli.js" attest --by security-reviewer --verdict pass --subject src/pay.ts --note "Signed fixture" --sign --out signed-attestation.json)
+          (cd "$work" && node "$GITHUB_WORKSPACE/dist/src/cli.js" attest --by security-reviewer --verdict pass --subject src/pay.ts --note "Signed fixture" --sign-format intoto --out signed-intoto-attestation.json)
+          # attest only writes inside the repository it runs in, so copy them out
+          cp "$work/signed-attestation.json" "$work/signed-intoto-attestation.json" test/fixtures/
           echo "https://github.com/${{ github.workflow_ref }}" > test/fixtures/signed-attestation.identity
       - name: Commit it
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add test/fixtures/signed-attestation.json test/fixtures/signed-attestation.identity
+          git add test/fixtures/signed-attestation.json test/fixtures/signed-intoto-attestation.json test/fixtures/signed-attestation.identity
           git commit -m "test: refresh the signed attestation fixture" || exit 0
           git push

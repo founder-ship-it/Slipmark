@@ -4,6 +4,16 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 
 ## [Unreleased]
 
+### Added
+- **`attest --sign-format intoto`** signs an in-toto Statement v1 instead of
+  Slipmark's own attestation: the attested files and their SHA-256 as
+  `subject`, the verdict as the predicate
+  (`https://github.com/founder-ship-it/Slipmark/attestation/v1`). Any in-toto
+  tool can read it. `verify` checks it exactly like the default format.
+- **`slipmark export-intoto`** writes Statement-signed verdicts as an in-toto
+  Bundle (`.intoto.jsonl`), one DSSE envelope per line, so they can sit next to
+  other tools' attestations. Part of #32.
+
 ## [0.6.2] - 2026-11-02
 
 Follow-ups from the independent review of v0.5 (#14). None of these let a

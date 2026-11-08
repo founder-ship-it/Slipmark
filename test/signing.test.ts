@@ -254,3 +254,15 @@ test("the existing Slipmark-format envelope still verifies", async () => {
   const report = await verifyWithSignatures({ root, policy: policy({ require: true, trusted: [WORKFLOW] }), verify: ok });
   assert.equal(report.ok, true);
 });
+
+// A genuine in-toto Statement signed by the same workflow. Made on the first run after this lands on main.
+const INTOTO_FIXTURE = new URL("../../test/fixtures/signed-intoto-attestation.json", import.meta.url);
+const hasIntotoFixture = (() => { try { readFileSync(INTOTO_FIXTURE); return true; } catch { return false; } })();
+
+test("real in-toto signature: the envelope is a Statement covering exactly this attestation", { skip: !hasIntotoFixture && "fixture not generated yet" }, async () => {
+  const real = JSON.parse(readFileSync(INTOTO_FIXTURE, "utf8"));
+  assert.equal(real.signature.bundle.dsseEnvelope.payloadType, INTOTO_PAYLOAD_TYPE);
+  assert.equal(bundleIdentity(real.signature.bundle), REAL_ID);
+  assert.deepEqual(await checkSignature(real, { trusted: [REAL_ID] }, ok), { state: "valid", identity: REAL_ID, issuer: "https://token.actions.githubusercontent.com", trusted: true });
+  assert.equal((await checkSignature({ ...real, verdict: "cleared" }, undefined, ok)).state, "invalid");
+});

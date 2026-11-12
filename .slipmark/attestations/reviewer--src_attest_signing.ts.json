@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-08T08:49:16.910Z",
+  "at": "2026-11-12T09:10:10.453Z",
   "subjects": [
     {
       "path": "src/attest/signing.ts",
-      "sha256": "d3131a0588f05265732dc4aace8af9bdf9de1cde18fe3560e6c5ea3e9828985f"
+      "sha256": "c87d0f8c9de74e4f3d9863138bc491ee76f909faf7745e4dd64575a21ae6a87b"
     }
   ],
   "agent": {
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
+      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
     }
   ],
-  "note": "Reviewed in-toto signing: the Statement's predicate is the whole unsigned attestation and checkSignature compares it byte for byte, so editing verdict, note, subjects, against, context or checks breaks it; payload types can't be swapped (expected bytes follow the declared type, unknown types refused). Malformed subjects, a non-string payload and broken signature/bundle/envelope shapes are invalid (exit 1, file named, rest still verified), never a crash; the Slipmark-format path is unchanged. intotoBundleLines skips and names non-objects, unsigned, malformed envelopes and Slipmark-format verdicts, and writes one canonical DSSE envelope per line. npm test 231 pass, 1 skipped (fixture not yet made)."
+  "note": "Change checked: Verify and sigstoreVerify exported unchanged; intotoBundleLines format 'sigstore' emits the attestation's full Sigstore bundle (keeps certificate/signer) and 'dsse' stays the default, matching the docs' .sigstore.jsonl vs bare envelope description; skip reasons unchanged."
 }

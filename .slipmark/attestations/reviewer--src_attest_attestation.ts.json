@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-08T08:49:17.038Z",
+  "at": "2026-11-12T09:10:10.500Z",
   "subjects": [
     {
       "path": "src/attest/attestation.ts",
-      "sha256": "832f2f5cb96a3deb814ae5a6a8495b59aa7ec326dc306907b525c669765bf34b"
+      "sha256": "71fb71d9c92853942aecc2e5ded73c6709779c1f30357e0ea49adcf4dfbacba1"
     }
   ],
   "agent": {
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
+      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
     }
   ],
-  "note": "File unchanged on this branch (git diff origin/main...HEAD empty for it); the doc change only adds two sections under Signed verdicts (in-toto signing; exporting an in-toto Bundle, including skipping malformed attestations and not checking signatures), none of which describe this file; its sections still match."
+  "note": "Change checked: Policy.bundle / BundlePolicy types and parsePolicy validation (object, non-empty require, https predicateType URI, non-empty signers, no duplicate types, https issuer) match the documented bundle section; rest of file unchanged."
 }

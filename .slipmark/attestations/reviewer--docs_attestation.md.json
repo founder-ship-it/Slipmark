@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-08T08:49:16.981Z",
+  "at": "2026-11-12T09:10:10.548Z",
   "subjects": [
     {
       "path": "docs/attestation.md",
-      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
+      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
     }
   ],
   "agent": {
@@ -15,12 +15,16 @@
   "against": [
     {
       "path": "src/attest/attestation.ts",
-      "sha256": "832f2f5cb96a3deb814ae5a6a8495b59aa7ec326dc306907b525c669765bf34b"
+      "sha256": "71fb71d9c92853942aecc2e5ded73c6709779c1f30357e0ea49adcf4dfbacba1"
     },
     {
       "path": "src/attest/signing.ts",
-      "sha256": "d3131a0588f05265732dc4aace8af9bdf9de1cde18fe3560e6c5ea3e9828985f"
+      "sha256": "c87d0f8c9de74e4f3d9863138bc491ee76f909faf7745e4dd64575a21ae6a87b"
+    },
+    {
+      "path": "src/attest/bundle.ts",
+      "sha256": "ca3212b79e9813f6678e23d3e7d548bf5f8f3dde34feba91e346db2321944170"
     }
   ],
-  "note": "The doc change only adds two sections, and each claim in them matches the code: --sign-format intoto implies --sign; the payload types, the Statement shape and predicateType are as shown; the predicate is the attestation without signature; verify treats both formats alike, including refusing malformed input as invalid; export writes one envelope per line, skips and lists other and malformed attestations, and copies envelopes without verifying them. Nothing else in the doc changed, so it still matches attestation.ts."
+  "note": "Checked the 'Checking a combined Bundle' section claim by claim against the code: .sigstore.jsonl required (bare envelopes malformed), policy example parses, accept conditions (signature+issuer+signer per type, holds against checkout, at least one per type, no malformed line), other types ignored, unknown required types refused, Slipmark entries via the verify pipeline without require/coverage, Guard rules incl. required run id and mandatory repo/head/base, content check, merge-checkout caveat. No claim the code doesn't keep."
 }

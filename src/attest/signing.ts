@@ -137,9 +137,9 @@ export async function signAttestation(att: Attestation, opts: { identityToken?: 
   return { ...(unsigned as Attestation), signature: { bundle } };
 }
 
-type Verify = (bundle: SigstoreBundle, issuer: string) => Promise<void>;
+export type Verify = (bundle: SigstoreBundle, issuer: string) => Promise<void>;
 
-async function sigstoreVerify(bundle: SigstoreBundle, issuer: string): Promise<void> {
+export async function sigstoreVerify(bundle: SigstoreBundle, issuer: string): Promise<void> {
   const sigstore = await import("sigstore");
   await sigstore.verify(bundle as unknown as Parameters<typeof sigstore.verify>[0], { certificateIssuer: issuer });
 }
@@ -193,7 +193,7 @@ export async function checkSignature(att: Record<string, unknown>, policy: Signa
  * named, since an in-toto consumer couldn't read them. The Bundle isn't signed as a whole: a
  * consumer must require each entry it needs by predicate type and signer.
  */
-export function intotoBundleLines(atts: { file: string; att: unknown }[]): { lines: string[]; skipped: { file: string; reason: string }[] } {
+export function intotoBundleLines(atts: { file: string; att: unknown }[], format: "dsse" | "sigstore" = "dsse"): { lines: string[]; skipped: { file: string; reason: string }[] } {
   const lines: string[] = [];
   const skipped: { file: string; reason: string }[] = [];
   for (const { file, att } of atts) {
@@ -205,6 +205,7 @@ export function intotoBundleLines(atts: { file: string; att: unknown }[]): { lin
     if (!env || typeof env !== "object") skipped.push({ file, reason: "not signed" });
     else if (typeof env.payload !== "string" || !Array.isArray(env.signatures)) skipped.push({ file, reason: "malformed envelope" });
     else if (env.payloadType !== INTOTO_PAYLOAD_TYPE) skipped.push({ file, reason: "signed in Slipmark's own format; re-attest with --sign-format intoto" });
+    else if (format === "sigstore") lines.push(JSON.stringify((att as { signature: AttestationSignature }).signature.bundle));
     else lines.push(canonicalJson({ payload: env.payload, payloadType: env.payloadType, signatures: env.signatures }));
   }
   return { lines, skipped };

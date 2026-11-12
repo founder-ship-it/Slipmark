@@ -592,6 +592,87 @@ The Bundle isn't signed as a whole, so a consumer has to require each entry it
 needs by predicate type and signer, and check each entry's subjects against the
 change. A missing entry is a refusal, never a pass.
 
+### Checking a combined Bundle
+
+Other tools sign their own in-toto Statements. `slipmark verify-bundle` checks
+a Bundle that holds several, and refuses unless each one you require is there
+and holds against this checkout.
+
+Use the `.sigstore.jsonl` form: one full Sigstore bundle per line. A bare DSSE
+envelope (`.intoto.jsonl`) carries no certificate, so nothing says who signed
+it, and `verify-bundle` refuses it.
+
+```bash
+slipmark export-intoto --format sigstore \
+  --include guard-verification.sigstore.jsonl \
+  --out combined.sigstore.jsonl
+slipmark verify-bundle combined.sigstore.jsonl
+```
+
+What to require lives in the policy, so it is read from the base branch like
+the rest:
+
+```json
+{
+  "schema": "slipmark/policy@1",
+  "bundle": {
+    "require": [
+      {
+        "predicateType": "https://github.com/codapult/codapult-guard/blob/main/docs/attestations/guard-verification-v1.md",
+        "signers": ["https://github.com/acme/api/.github/workflows/guard-trusted-pr-attestation.yml@refs/heads/main"]
+      },
+      {
+        "predicateType": "https://github.com/founder-ship-it/Slipmark/attestation/v1",
+        "signers": ["https://github.com/acme/api/.github/workflows/agent-review.yml@refs/heads/main"]
+      }
+    ]
+  }
+}
+```
+
+The gate accepts only when:
+
+- every entry of a required type has a valid Sigstore signature, from the
+  issuer (GitHub Actions by default) and one of the `signers` listed for that
+  type;
+- every entry of a required type holds against this checkout (below);
+- each required type has at least one such entry;
+- no line is malformed.
+
+Entries of other types, such as SLSA provenance, are listed and ignored. A
+required type Slipmark has no check for is refused: a signature says who made a
+claim, not that the claim holds here.
+
+**Slipmark verdicts** go through the same checks as an attestation file: the
+signed Statement must be exactly the one Slipmark makes from its predicate, the
+verdict must be passing, and every subject, `against` file and recorded context
+must match the files as they are now. The policy's `require` and `coverage` are
+not applied here; they belong to `slipmark verify`.
+
+**[Codapult Guard](https://github.com/codapult/codapult-guard) receipts**
+(predicate v1) are checked as
+[Guard's spec](https://github.com/codapult/codapult-guard/blob/main/docs/attestations/guard-verification-v1.md)
+asks a consumer to: outcome `pass`, every required stage `ok`, a complete and
+stable scope, the scope fingerprint recomputed, and the subjects exactly the
+aggregate followed by one per present file. On top of that:
+
+- The receipt must name a Guard run, and its scope must name the expected
+  repository, pull request head and base. In GitHub Actions these come from
+  the environment and the `pull_request` event. Elsewhere pass `--repo`,
+  `--head` and `--base`. Without all three the gate can't run.
+- Every file Guard hashed must have the same bytes here, and every file it saw
+  deleted must be absent. Content, not names.
+
+A Guard file subject is a run-level claim: one passing Guard run covered that
+file along with everything else in its scope. It is not a review of that file,
+so it never stands in for a Slipmark verdict. And because Guard binds its
+receipt to a commit, any new commit needs a fresh Guard run, where a Slipmark
+verdict on an untouched file still counts.
+
+Run `verify-bundle` on the tree Guard checked, the pull request head. On a
+`pull_request` merge checkout, files changed on the base branch since will
+differ from what Guard saw, and the Guard entry is refused.
+
 ## Why the gate checks content, not branches
 
 The incident behind this feature: a final verification job checked out the

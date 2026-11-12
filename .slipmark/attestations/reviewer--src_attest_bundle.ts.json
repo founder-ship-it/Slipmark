@@ -1,0 +1,22 @@
+{
+  "schema": "slipmark/attestation@2",
+  "by": "reviewer",
+  "verdict": "pass",
+  "at": "2026-11-12T09:10:10.404Z",
+  "subjects": [
+    {
+      "path": "src/attest/bundle.ts",
+      "sha256": "ca3212b79e9813f6678e23d3e7d548bf5f8f3dde34feba91e346db2321944170"
+    }
+  ],
+  "agent": {
+    "model": "claude-opus-5-5"
+  },
+  "against": [
+    {
+      "path": "docs/attestation.md",
+      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
+    }
+  ],
+  "note": "Checked against docs 'Checking a combined Bundle' and Guard's spec + reference verifier (verify-guard-attestation.mjs): Statement/predicate type, receipt v1/kind/outcome/non-empty runId, stage rules, complete+stable scope, fingerprint recompute (spec test vector), subject order, path rules, repo (case-insensitive) + head + base all mandatory (verifyBundle throws without them; checkGuardStatement refuses), content check of every hashed/deleted file. Reproduced: real Guard fixture verified on the js-toolkit/changesets-guard-validate checkout at 0aa3f0f/a638d24; missing/empty runId, other repo and absent repository now refused, matching the reference; ~1,040 Guard and 120 Slipmark entry mutations, no crash. Signatures via injected verify only (Sigstore unreachable)."
+}

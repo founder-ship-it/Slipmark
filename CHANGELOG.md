@@ -5,6 +5,16 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 ## [Unreleased]
 
 ### Added
+- **`slipmark verify-bundle`** checks a combined in-toto Bundle against a new
+  `bundle` section in the policy: each required predicate type needs at least
+  one entry, every entry of a required type must be signed by a listed signer
+  and hold against this checkout, and malformed lines refuse. Built-in checks
+  for Slipmark verdicts and for [Codapult Guard](https://github.com/codapult/codapult-guard)
+  verification receipts (predicate v1), including Guard's scope fingerprint,
+  the pull request revisions and every file Guard hashed. Part of #32.
+- **`export-intoto --format sigstore`** writes full Sigstore bundles, which keep
+  the signer, and **`--include`** adds other tools' lines, for example Guard's
+  `.sigstore.jsonl`.
 - **`attest --sign-format intoto`** signs an in-toto Statement v1 instead of
   Slipmark's own attestation: the attested files and their SHA-256 as
   `subject`, the verdict as the predicate

@@ -2,7 +2,7 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-08T08:49:17.088Z",
+  "at": "2026-11-12T09:10:21.411Z",
   "subjects": [
     {
       "path": "src/attest/context.ts",
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "d1c617acbc7e33fb86d6d65e377f659c86af86a47e3bfaa9490becfdcaed1f97"
+      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
     }
   ],
-  "note": "File unchanged on this branch (git diff origin/main...HEAD empty for it); the doc change only adds two sections under Signed verdicts (in-toto signing; exporting an in-toto Bundle, including skipping malformed attestations and not checking signatures), none of which describe this file; its sections still match."
+  "note": "File unchanged in this working tree (git diff empty for it). The docs/attestation.md change only adds the 'Checking a combined Bundle' section (verify-bundle, bundle.require, Guard receipts with required run id and repo/head/base, export-intoto --format sigstore/--include), which does not describe this file; its existing sections still match it."
 }

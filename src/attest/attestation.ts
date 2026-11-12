@@ -118,6 +118,16 @@ export interface Policy {
   require?: string[];
   /** Agent context rules. See docs/attestation.md, "Agent context". */
   context?: ContextPolicy;
+  /** What `slipmark verify-bundle` requires in an in-toto Bundle. See docs/attestation.md, "Checking a combined Bundle". */
+  bundle?: BundlePolicy;
+}
+
+/** `.slipmark/policy.json` → `bundle`. */
+export interface BundlePolicy {
+  /** Each entry: at least one valid attestation of this predicate type, signed by one of these signers. */
+  require: { predicateType: string; signers: string[] }[];
+  /** OIDC issuer the signing certificates must come from. Default: GitHub Actions. */
+  issuer?: string;
 }
 
 export interface ContextPolicy {
@@ -749,6 +759,24 @@ export function parsePolicy(text: string, label: string = POLICY_FILE): Policy {
     if (ctx.requireRecorded !== undefined && typeof ctx.requireRecorded !== "boolean") throw new Error(`${POLICY_FILE}: context.requireRecorded must be true or false`);
     if (ctx.githubRender !== undefined && !["auto", "require", "off"].includes(ctx.githubRender)) throw new Error(`${POLICY_FILE}: context.githubRender must be "auto", "require" or "off"`);
     if (ctx.hiddenContent !== undefined && !["refuse", "allow"].includes(ctx.hiddenContent)) throw new Error(`${POLICY_FILE}: context.hiddenContent must be "refuse" or "allow"`);
+  }
+  const bundle = policy.bundle;
+  if (bundle !== undefined) {
+    if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) throw new Error(`${POLICY_FILE}: bundle must be an object`);
+    const reqs = bundle.require;
+    if (!Array.isArray(reqs) || reqs.length === 0) throw new Error(`${POLICY_FILE}: bundle.require must list at least one { "predicateType", "signers" }`);
+    const seen = new Set<string>();
+    for (const r of reqs) {
+      if (!r || typeof r !== "object" || Array.isArray(r) || typeof r.predicateType !== "string" || !/^https:\/\/\S+$/.test(r.predicateType)) {
+        throw new Error(`${POLICY_FILE}: each bundle.require entry needs a "predicateType" URI`);
+      }
+      if (!(Array.isArray(r.signers) && r.signers.length > 0 && r.signers.every((x) => typeof x === "string" && x.length > 0))) {
+        throw new Error(`${POLICY_FILE}: bundle.require for ${r.predicateType} needs a "signers" list, for example the workflow that signs it at refs/heads/main`);
+      }
+      if (seen.has(r.predicateType)) throw new Error(`${POLICY_FILE}: bundle.require lists ${r.predicateType} twice`);
+      seen.add(r.predicateType);
+    }
+    if (bundle.issuer !== undefined && !(typeof bundle.issuer === "string" && /^https:\/\//.test(bundle.issuer))) throw new Error(`${POLICY_FILE}: bundle.issuer must be an https URL`);
   }
   const req = policy.require;
   if (req !== undefined && !(Array.isArray(req) && req.every((r) => typeof r === "string" && r.length > 0))) {

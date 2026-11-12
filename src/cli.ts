@@ -22,6 +22,7 @@ import type { DashboardData } from "./dashboard/data.js";
 import { createAttestation, writeAttestation, checkAttestationTarget, defaultAttestationPath, verifyWithSignatures, resolvePolicy, loadPolicy, POLICY_SCHEMA, type Policy, type PolicySource, type VerifyReport, type AttesterKind } from "./attest/attestation.js";
 import { signAttestation, intotoBundleLines, type SignFormat } from "./attest/signing.js";
 import { listAttestationFiles } from "./attest/attestation.js";
+import { verifyBundle, expectedFromEnv, type BundleReport, type ExpectedSource } from "./attest/bundle.js";
 import { existsSync } from "node:fs";
 import { planInit, applyInit } from "./init.js";
 import { uploadRun, summaryMarkdown } from "./cloud/upload.js";
@@ -44,6 +45,7 @@ Usage
   slipmark attest ...           Record a verdict bound to the SHA-256 of the files it covers
   slipmark verify               Refuse if any verdict is about different files from these
   slipmark export-intoto        Write signed verdicts as an in-toto Bundle (.intoto.jsonl)
+  slipmark verify-bundle <f>    Check a combined Bundle against the policy's "bundle" section
   slipmark mcp [--root <dir>]   Serve attest and verify as MCP tools on stdio (Codex, Cursor, Copilot, Claude, Gemini)
   slipmark upload               Record this CI run in Slipmark Cloud (GitHub Actions, id-token: write)
   slipmark <pack>               Run drift diagnosis locks
@@ -78,9 +80,21 @@ verify
   Exit 2: could not run (bad input, or the coverage base is missing).
 
 export-intoto
-  [--dir .slipmark/attestations] [--out <file.intoto.jsonl>]
-  One DSSE envelope per line, for verdicts signed with --sign-format intoto. Others are
-  skipped and listed. Writes to stdout without --out.
+  [--dir .slipmark/attestations] [--out <file.jsonl>]
+  [--format dsse|sigstore]   dsse (default): one DSSE envelope per line (.intoto.jsonl).
+                             sigstore: one full Sigstore bundle per line (.sigstore.jsonl),
+                             which keeps the signer, so verify-bundle can check it
+  [--include <file.jsonl>...]  add other tools' lines, for example Guard's .sigstore.jsonl
+  For verdicts signed with --sign-format intoto. Others are skipped and listed.
+  Writes to stdout without --out.
+
+verify-bundle <file.sigstore.jsonl>
+  [--repo <owner/name>] [--head <sha>] [--base <sha>]  what a Guard entry must be bound
+                             to. Default: from the pull request event in GitHub Actions
+  [--policy-from <ref|working-tree>] [--json]
+  Every entry of a type listed in the policy's bundle.require must verify and be signed by
+  a listed signer, and each listed type needs at least one. Other types are ignored.
+  Exit 0: accepted. Exit 1: refused. Exit 2: could not run.
 
 upload
   [--dir .slipmark/attestations] [--require <file>...] [--url <ingest url>] [--strict]
@@ -382,17 +396,92 @@ function exportIntotoMain(args: string[]): void {
       console.error(`  skipped ${relative(process.cwd(), f)}: not valid JSON`);
     }
   }
-  const { lines, skipped } = intotoBundleLines(atts);
+  const format = argVal(args, "--format") ?? "dsse";
+  if (format !== "dsse" && format !== "sigstore") fail("--format takes dsse or sigstore");
+  const { lines, skipped } = intotoBundleLines(atts, format as "dsse" | "sigstore");
   for (const s of skipped) console.error(`  skipped ${s.file}: ${s.reason}`);
+  for (const inc of argVals(args, "--include")) {
+    let incText: string;
+    try {
+      incText = readFileSync(resolve(inc), "utf8");
+    } catch (e) {
+      fail(`--include ${inc}: ${e instanceof Error ? e.message : String(e)}`);
+    }
+    let added = 0;
+    for (const [n, l] of incText!.split("\n").entries()) {
+      if (!l.trim()) continue;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(l);
+      } catch {
+        fail(`--include ${inc}: line ${n + 1} isn't JSON`);
+      }
+      const env = parsed && typeof parsed === "object" ? (parsed as { dsseEnvelope?: unknown; payload?: unknown }) : null;
+      const isBundle = !!env && typeof env.dsseEnvelope === "object" && env.dsseEnvelope !== null;
+      const isEnvelope = !!env && typeof env.payload === "string";
+      if (format === "sigstore" ? !isBundle : !isEnvelope) {
+        fail(`--include ${inc}: line ${n + 1} isn't a ${format === "sigstore" ? "Sigstore bundle" : "DSSE envelope"}, so it doesn't belong in a --format ${format} Bundle`);
+      }
+      lines.push(JSON.stringify(parsed));
+      added++;
+    }
+    console.error(`  included ${added} line(s) from ${inc}`);
+  }
   const text = lines.length ? `${lines.join("\n")}\n` : "";
   const outArg = argVal(args, "--out");
   if (outArg) {
     const out = resolve(outArg);
     if (!out.endsWith(".jsonl")) fail("--out must be a .jsonl file, for example verdicts.intoto.jsonl");
     writeFileSync(out, text);
-    console.error(`  ${lines.length} envelope(s) → ${relative(process.cwd(), out)}`);
+    console.error(`  ${lines.length} line(s) → ${relative(process.cwd(), out)}`);
   } else process.stdout.write(text);
   if (!lines.length) process.exitCode = 1;
+}
+
+/** `slipmark verify-bundle <file> [--repo r] [--head sha] [--base sha] [--json]` */
+async function verifyBundleMain(args: string[]): Promise<void> {
+  const file = args[0] && !args[0].startsWith("--") ? args[0] : null;
+  if (!file) fail("verify-bundle needs a Bundle file, for example: slipmark verify-bundle combined.sigstore.jsonl");
+  let report: BundleReport;
+  try {
+    const text = readFileSync(resolve(file!), "utf8");
+    const { policy, info } = policyFromArgs(args.slice(1));
+    if (!policy) throw new Error('there is no .slipmark/policy.json, so nothing says which entries are required. Add a "bundle" section.');
+    const fromEnv = expectedFromEnv(process.env, (p) => readFileSync(p, "utf8"));
+    const expected: ExpectedSource = {
+      repository: argVal(args, "--repo") ?? fromEnv.repository,
+      head: argVal(args, "--head") ?? fromEnv.head,
+      base: argVal(args, "--base") ?? fromEnv.base,
+    };
+    for (const k of ["head", "base"] as const) {
+      const v = expected[k]?.toLowerCase();
+      if (v !== undefined && !/^[a-f0-9]{40}$/.test(v)) throw new Error(`--${k} must be a full 40-character commit SHA`);
+      expected[k] = v;
+    }
+    if (expected.repository !== undefined && !/^[^/\s]+\/[^/\s]+$/.test(expected.repository)) throw new Error("--repo must be owner/name");
+    report = await verifyBundle({ text, policy, policySource: info, expected });
+  } catch (e) {
+    fail(e instanceof Error ? e.message : String(e));
+  }
+  if (args.includes("--json")) {
+    console.log(JSON.stringify(report!, null, 2));
+    process.exit(report!.ok ? 0 : 1);
+  }
+  const r = report!;
+  const verified = r.entries.filter((e) => e.status === "verified").length;
+  const refused = r.entries.filter((e) => e.status === "refused" || e.status === "malformed").length;
+  console.log(`\nSlipmark verify-bundle: ${verified} verified · ${refused} refused · ${r.entries.length - verified - refused} ignored\n`);
+  for (const e of r.entries) {
+    const icon = e.status === "verified" ? "✓" : e.status === "ignored" ? "·" : "✗";
+    console.log(`  ${icon} line ${String(e.line).padEnd(4)} ${e.status.padEnd(9)} ${e.predicateType ?? ""}`);
+    console.log(`      ${e.message}${e.signer ? `\n      signed by ${e.signer}` : ""}`);
+  }
+  for (const t of r.missing) console.log(`  ✗ missing   no verified entry of required type ${t}`);
+  const p = r.policy;
+  if (p) console.log(`\n  Policy: ${p.source === "base" ? `from ${p.ref}` : p.source === "working-tree" ? "from this checkout" : "none"}${p.sha256 ? ` (sha256 ${p.sha256.slice(0, 12)})` : ""}`);
+  for (const n of [...(p?.notes ?? []), ...r.notes]) console.log(`  ! ${n}`);
+  console.log(r.ok ? "\n  Every required entry checks out against this checkout.\n" : "\n  Gate refused.\n");
+  process.exit(r.ok ? 0 : 1);
 }
 
 /** `slipmark verify [--dir d] [--require <file>...] [--json]` */
@@ -469,6 +558,10 @@ async function main() {
   }
   if (args[0] === "verify") {
     await verifyMain(args.slice(1));
+    return;
+  }
+  if (args[0] === "verify-bundle") {
+    await verifyBundleMain(args.slice(1));
     return;
   }
   if (args[0] === "export-intoto") {

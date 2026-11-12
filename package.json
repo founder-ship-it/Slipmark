@@ -1,6 +1,6 @@
 {
   "name": "slipmark",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "mcpName": "io.github.founder-ship-it/slipmark",
   "description": "Make AI agents prove what they checked. Bind every agent verdict to a SHA-256 of the files it read, refuse on mismatch, and diagnose AI feature drift with honest repair prompts.",
   "homepage": "https://www.replyintelligencegroup.co.uk/products/slipmark",

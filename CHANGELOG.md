@@ -4,6 +4,12 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-11-12
+
+In-toto interoperability: Slipmark verdicts as in-toto Statements, and one
+gate over a Bundle that holds them alongside other tools' attestations,
+starting with Codapult Guard (#32).
+
 ### Added
 - **`slipmark verify-bundle`** checks a combined in-toto Bundle against a new
   `bundle` section in the policy: each required predicate type needs at least
@@ -23,6 +29,12 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 - **`slipmark export-intoto`** writes Statement-signed verdicts as an in-toto
   Bundle (`.intoto.jsonl`), one DSSE envelope per line, so they can sit next to
   other tools' attestations. Part of #32.
+
+### Fixed
+- An attestation file with malformed `subjects`, or a signature envelope whose
+  `payload` isn't a string, is now refused as `invalid`. Before, one such file
+  made `verify` stop with exit 2, so a single committed file could block the
+  gate for every pull request. It never let a change through.
 
 ## [0.6.2] - 2026-11-02
 

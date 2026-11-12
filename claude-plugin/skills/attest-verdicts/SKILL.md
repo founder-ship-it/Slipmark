@@ -18,7 +18,7 @@ sufficient. Not for routine edits where you give no verdict.
 ## How
 
 ```bash
-npx slipmark@0.6.2 attest --by <your-role> --verdict <pass|fail|blocked> \
+npx slipmark@0.7.0 attest --by <your-role> --verdict <pass|fail|blocked> \
   --subject <file> --subject <file> \
   --note "<one line: what you checked and the outcome>"
 ```
@@ -33,7 +33,7 @@ npx slipmark@0.6.2 attest --by <your-role> --verdict <pass|fail|blocked> \
 Then confirm:
 
 ```bash
-npx slipmark@0.6.2 verify
+npx slipmark@0.7.0 verify
 ```
 
 Exit 0 means every verdict matches the files as they are now. A `fail` verdict

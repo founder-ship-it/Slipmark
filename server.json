@@ -8,12 +8,12 @@
     "source": "github"
   },
   "websiteUrl": "https://www.replyintelligencegroup.co.uk/products/slipmark",
-  "version": "0.6.2",
+  "version": "0.7.0",
   "packages": [
     {
       "registryType": "npm",
       "identifier": "slipmark",
-      "version": "0.6.2",
+      "version": "0.7.0",
       "transport": {
         "type": "stdio"
       },

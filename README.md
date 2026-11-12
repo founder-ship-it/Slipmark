@@ -10,7 +10,7 @@ Add it to a workflow:
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: founder-ship-it/Slipmark@v0.6.2
+- uses: founder-ship-it/Slipmark@v0.7.0
   with:
     require: |
       specs/your-spec.md
@@ -48,7 +48,7 @@ Slipmark does two things:
    to fake confidence it doesn't have), and hands your coding agent a repair
    prompt.
 
-> Status: `v0.6.2`, early. Apache-2.0. Optional hosted layer: [Slipmark Cloud](#slipmark-cloud).
+> Status: `v0.7.0`, early. Apache-2.0. Optional hosted layer: [Slipmark Cloud](#slipmark-cloud).
 
 ## Why the gate exists
 
@@ -170,7 +170,7 @@ any agent that speaks MCP can record and check verdicts. For OpenAI Codex, in
 ```toml
 [mcp_servers.slipmark]
 command = "npx"
-args = ["-y", "slipmark@0.6.2", "mcp"]
+args = ["-y", "slipmark@0.7.0", "mcp"]
 ```
 
 Setup for Claude Code, Cursor, Copilot in VS Code and Gemini CLI is in
@@ -283,7 +283,7 @@ refused. Details, including which ref to trust, in
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: founder-ship-it/Slipmark@v0.6.2
+- uses: founder-ship-it/Slipmark@v0.7.0
   with:
     require: |
       specs/invoice-export.md
@@ -337,7 +337,7 @@ jobs:
       id-token: write   # GitHub signs a token saying which repo and run this is. No API key.
     steps:
       - uses: actions/checkout@v4
-      - uses: founder-ship-it/Slipmark@v0.6.2
+      - uses: founder-ship-it/Slipmark@v0.7.0
         with:
           cloud: "true"
 ```

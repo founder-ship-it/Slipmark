@@ -4,6 +4,8 @@
 
 *A [Reply Intelligence Group](https://www.replyintelligencegroup.co.uk/products/slipmark) project.*
 
+[![founder-ship-it/Slipmark MCP server](https://glama.ai/mcp/servers/founder-ship-it/Slipmark/badges/score.svg)](https://glama.ai/mcp/servers/founder-ship-it/Slipmark)
+
 **Make AI agents prove what they checked.**
 
 Add it to a workflow:

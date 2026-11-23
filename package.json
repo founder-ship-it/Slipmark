@@ -77,6 +77,6 @@
   },
   "dependencies": {
     "marked": "15.0.12",
-    "sigstore": "^3.1.0"
+    "sigstore": "^4.1.1"
   }
 }

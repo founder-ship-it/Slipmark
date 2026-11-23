@@ -479,6 +479,24 @@ function parsePolicy(text, label = POLICY_FILE) {
     if (ctx.githubRender !== void 0 && !["auto", "require", "off"].includes(ctx.githubRender)) throw new Error(`${POLICY_FILE2}: context.githubRender must be "auto", "require" or "off"`);
     if (ctx.hiddenContent !== void 0 && !["refuse", "allow"].includes(ctx.hiddenContent)) throw new Error(`${POLICY_FILE2}: context.hiddenContent must be "refuse" or "allow"`);
   }
+  const bundle = policy.bundle;
+  if (bundle !== void 0) {
+    if (!bundle || typeof bundle !== "object" || Array.isArray(bundle)) throw new Error(`${POLICY_FILE2}: bundle must be an object`);
+    const reqs = bundle.require;
+    if (!Array.isArray(reqs) || reqs.length === 0) throw new Error(`${POLICY_FILE2}: bundle.require must list at least one { "predicateType", "signers" }`);
+    const seen = /* @__PURE__ */ new Set();
+    for (const r of reqs) {
+      if (!r || typeof r !== "object" || Array.isArray(r) || typeof r.predicateType !== "string" || !/^https:\/\/\S+$/.test(r.predicateType)) {
+        throw new Error(`${POLICY_FILE2}: each bundle.require entry needs a "predicateType" URI`);
+      }
+      if (!(Array.isArray(r.signers) && r.signers.length > 0 && r.signers.every((x) => typeof x === "string" && x.length > 0))) {
+        throw new Error(`${POLICY_FILE2}: bundle.require for ${r.predicateType} needs a "signers" list, for example the workflow that signs it at refs/heads/main`);
+      }
+      if (seen.has(r.predicateType)) throw new Error(`${POLICY_FILE2}: bundle.require lists ${r.predicateType} twice`);
+      seen.add(r.predicateType);
+    }
+    if (bundle.issuer !== void 0 && !(typeof bundle.issuer === "string" && /^https:\/\//.test(bundle.issuer))) throw new Error(`${POLICY_FILE2}: bundle.issuer must be an https URL`);
+  }
   const req = policy.require;
   if (req !== void 0 && !(Array.isArray(req) && req.every((r) => typeof r === "string" && r.length > 0))) {
     throw new Error(`${POLICY_FILE2}: require must be a list of file paths`);

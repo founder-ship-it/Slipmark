@@ -4,6 +4,20 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 
 ## [Unreleased]
 
+### Security
+- **sigstore 3.1.0 → 4.1.1**, which brings @sigstore/core 3.2.1, and glob and
+  minimatch pinned to fixed releases (14.0.2 and 11.0.1 or later) through npm
+  `overrides`. This clears GHSA-52v5-jr5w-gjxr (`certificateOIDs` ignored),
+  GHSA-jfc7-64v2-mr8c (DSSE `payloadType` encoding) and the glob and minimatch
+  advisories. Neither sigstore advisory could be used against Slipmark:
+  Slipmark checks the issuer with `certificateIssuer`, which sigstore still
+  enforced, and compares the envelope's payload type exactly before calling
+  sigstore. Checked against the real signed fixtures: both verify, and both are
+  refused when the expected issuer is wrong.
+
+### Changed
+- Node 22.9 or later is now required (was 22.6), because sigstore 4 needs it.
+
 ## [0.7.0] - 2026-11-12
 
 In-toto interoperability: Slipmark verdicts as in-toto Statements, and one

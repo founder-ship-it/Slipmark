@@ -97,7 +97,7 @@ Two independent reviewers on sensitive paths, and the rest of
 
 ## Quick start
 
-In the repository you want to protect (Node 22.6 or later):
+In the repository you want to protect (Node 22.9 or later):
 
 ```bash
 npx slipmark init

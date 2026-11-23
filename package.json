@@ -68,9 +68,9 @@
   ],
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
-    "@types/node": "^22.19.21",
-    "esbuild": "^0.25.12",
-    "typescript": "^5.9.3"
+    "@types/node": "^26.6.6",
+    "esbuild": "^0.28.2",
+    "typescript": "^7.0.2"
   },
   "publishConfig": {
     "access": "public"

@@ -187,8 +187,9 @@ test("cli: --no-policy is recorded on the report", () => {
 
 test("cli: a policy with uncommitted edits counts as changed on the branch", () => {
   const { root } = setup();
-  const before = readFileSync(join(root, POLICY), "utf8");
-  writeFileSync(join(root, POLICY), before.replace("]", ", \"src/other.ts\"]"));
+  const policy = JSON.parse(readFileSync(join(root, POLICY), "utf8")) as { require: string[] };
+  policy.require.push("src/other.ts");
+  writeFileSync(join(root, POLICY), JSON.stringify(policy));
   const report = JSON.parse(cli(root, ["verify", "--json", "--policy-from", "main"]).stdout);
   assert.equal(report.policy.changedOnBranch, true);
   rmSync(root, { recursive: true, force: true });

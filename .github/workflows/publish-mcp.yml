@@ -18,7 +18,7 @@ jobs:
       id-token: write   # GitHub OIDC login to the registry, for the io.github.founder-ship-it namespace
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "24"
       - name: Check server.json matches package.json and npm

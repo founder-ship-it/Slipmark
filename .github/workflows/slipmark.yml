@@ -15,7 +15,7 @@ jobs:
         with:
           # Full history so Slipmark can compute a diff vs. the last passing run.
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - run: npm ci
@@ -95,7 +95,7 @@ jobs:
       id-token: write   # the identity the verdict is signed with
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"
       - run: npm ci && npm run build

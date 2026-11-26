@@ -76,7 +76,7 @@
     "access": "public"
   },
   "dependencies": {
-    "marked": "15.0.12",
+    "marked": "18.2.1",
     "sigstore": "^4.1.1"
   },
   "overrides": {

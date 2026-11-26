@@ -4,6 +4,7 @@
 
 *A [Reply Intelligence Group](https://www.replyintelligencegroup.co.uk/products/slipmark) project.*
 
+[![Gated by Slipmark](https://img.shields.io/badge/gated%20by-Slipmark-0d1117)](https://github.com/founder-ship-it/Slipmark)
 [![founder-ship-it/Slipmark MCP server](https://glama.ai/mcp/servers/founder-ship-it/Slipmark/badges/score.svg)](https://glama.ai/mcp/servers/founder-ship-it/Slipmark)
 
 **Make AI agents prove what they checked.**
@@ -19,6 +20,10 @@ Add it to a workflow:
 ```
 
 When a file changes after an agent signed it off, the build refuses:
+
+![An agent signs off src/payments.ts, one more commit changes it, and slipmark verify refuses](assets/demo.gif)
+
+In CI it looks like this:
 
 ```
 Slipmark verify: 1 verified · 1 refused
@@ -599,6 +604,16 @@ npm run demo          # drift diagnosis on the demo pack
   types, bisection wiring.
 - [Contributing](./CONTRIBUTING.md) — setup, layout, the non-negotiables.
 - [Changelog](./CHANGELOG.md).
+
+## Show it's gated
+
+Using Slipmark? Add the badge to your README:
+
+[![Gated by Slipmark](https://img.shields.io/badge/gated%20by-Slipmark-0d1117)](https://github.com/founder-ship-it/Slipmark)
+
+```markdown
+[![Gated by Slipmark](https://img.shields.io/badge/gated%20by-Slipmark-0d1117)](https://github.com/founder-ship-it/Slipmark)
+```
 
 ## License
 

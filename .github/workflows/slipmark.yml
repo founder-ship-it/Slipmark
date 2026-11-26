@@ -11,7 +11,7 @@ jobs:
       contents: read
       id-token: write   # lets the Action record this run in Slipmark Cloud
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           # Full history so Slipmark can compute a diff vs. the last passing run.
           fetch-depth: 0
@@ -94,7 +94,7 @@ jobs:
       contents: read
       id-token: write   # the identity the verdict is signed with
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: actions/setup-node@v4
         with:
           node-version: "22"

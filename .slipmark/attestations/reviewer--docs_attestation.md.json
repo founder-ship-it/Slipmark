@@ -2,11 +2,11 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-12T09:10:10.548Z",
+  "at": "2026-11-26T12:22:13.305Z",
   "subjects": [
     {
       "path": "docs/attestation.md",
-      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
+      "sha256": "3689523d7867928f151256a5c97e0845ad4d7973c83fc8415ece636816ff9686"
     }
   ],
   "agent": {
@@ -26,5 +26,5 @@
       "sha256": "ca3212b79e9813f6678e23d3e7d548bf5f8f3dde34feba91e346db2321944170"
     }
   ],
-  "note": "Checked the 'Checking a combined Bundle' section claim by claim against the code: .sigstore.jsonl required (bare envelopes malformed), policy example parses, accept conditions (signature+issuer+signer per type, holds against checkout, at least one per type, no malformed line), other types ignored, unknown required types refused, Slipmark entries via the verify pipeline without require/coverage, Guard rules incl. required run id and mandatory repo/head/base, content check, merge-checkout caveat. No claim the code doesn't keep."
+  "note": "Re-checked after adding the link to founder-ship-it/slipmark-guard-example under 'Checking a combined Bundle'. The example repo exists and is public, runs Guard's trusted workflow and Slipmark's side by side with one verify-bundle gate, and has two open PRs, one accepted and one refused. The rest of the section is unchanged and still matches the code."
 }

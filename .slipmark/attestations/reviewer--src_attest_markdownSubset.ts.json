@@ -2,7 +2,7 @@
   "schema": "slipmark/attestation@2",
   "by": "reviewer",
   "verdict": "pass",
-  "at": "2026-11-12T09:10:21.504Z",
+  "at": "2026-11-26T12:22:24.903Z",
   "subjects": [
     {
       "path": "src/attest/markdownSubset.ts",
@@ -15,8 +15,8 @@
   "against": [
     {
       "path": "docs/attestation.md",
-      "sha256": "077fde92812ba6704f40e299abf38f48bc618868c87b82499fab4fbfdcdf59ea"
+      "sha256": "3689523d7867928f151256a5c97e0845ad4d7973c83fc8415ece636816ff9686"
     }
   ],
-  "note": "File unchanged in this working tree (git diff empty for it). The docs/attestation.md change only adds the 'Checking a combined Bundle' section (verify-bundle, bundle.require, Guard receipts with required run id and repo/head/base, export-intoto --format sigstore/--include), which does not describe this file; its existing sections still match it."
+  "note": "File unchanged in this working tree (git diff empty for it). The docs/attestation.md change only adds the 'Checking a combined Bundle' section (verify-bundle, bundle.require, Guard receipts with required run id and repo/head/base, export-intoto --format sigstore/--include), which does not describe this file; its existing sections still match it. Re-recorded on 2026-11-26: the only change since is a docs paragraph in docs/attestation.md linking the slipmark-guard-example repo, which makes no claim about this code. Subject unchanged."
 }

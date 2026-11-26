@@ -1,0 +1,16 @@
+{
+  "schema": "slipmark/attestation@2",
+  "by": "reviewer",
+  "verdict": "pass",
+  "at": "2026-11-26T13:04:16.991Z",
+  "subjects": [
+    {
+      "path": "src/cli.ts",
+      "sha256": "849201719a06d71df9224c8f13e879834661ebf4f4deb6e49b10ec1e342b66f9"
+    }
+  ],
+  "agent": {
+    "model": "claude-opus-5-5"
+  },
+  "note": "Change checked: adds the check subcommand (checkMain: --since, --dir, --json) and its help line; nothing else in the CLI changed."
+}

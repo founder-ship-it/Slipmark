@@ -28,6 +28,7 @@ import { planInit, applyInit } from "./init.js";
 import { uploadRun, summaryMarkdown } from "./cloud/upload.js";
 import { appendFileSync } from "node:fs";
 import { serveMcp, mcpRoot } from "./mcp.js";
+import { checkRepo, renderCheck } from "./check.js";
 
 /** Version from the package this CLI ships in (dist/src/cli.js → ../../package.json). */
 function version(): string {
@@ -41,6 +42,7 @@ function version(): string {
 const HELP = `Slipmark: make AI agents prove what they checked.
 
 Usage
+  slipmark check                See how much recent code coding agents wrote, and how much of it has a verdict (read-only)
   slipmark init                 Wire Slipmark into this repo (workflow + agent instructions)
   slipmark attest ...           Record a verdict bound to the SHA-256 of the files it covers
   slipmark verify               Refuse if any verdict is about different files from these
@@ -519,6 +521,16 @@ async function verifyMain(args: string[]): Promise<void> {
   process.exit(report.ok ? 0 : 1);
 }
 
+function checkMain(args: string[]): void {
+  const sinceIdx = args.indexOf("--since");
+  const since = sinceIdx >= 0 ? args[sinceIdx + 1] : undefined;
+  if (sinceIdx >= 0 && (!since || since.startsWith("--"))) fail('usage: slipmark check [--since "90 days ago"] [--dir .slipmark/attestations] [--json]');
+  const dirIdx = args.indexOf("--dir");
+  const dir = dirIdx >= 0 ? args[dirIdx + 1] : undefined;
+  const report = checkRepo({ since, dir });
+  console.log(args.includes("--json") ? JSON.stringify(report, null, 2) : renderCheck(report));
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -542,6 +554,10 @@ async function main() {
   }
   if (args[0] === "upload") {
     await uploadMain(args.slice(1));
+    return;
+  }
+  if (args[0] === "check") {
+    checkMain(args.slice(1));
     return;
   }
   if (args[0] === "init") {

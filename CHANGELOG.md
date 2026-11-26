@@ -4,6 +4,16 @@ All notable changes to Slipmark (formerly DriftGuard) are documented here.
 
 ## [Unreleased]
 
+### Added
+- **`slipmark check`**: a read-only first look at a repository. It counts the
+  recent commits that say a coding agent wrote them (from commit authors,
+  `Co-authored-by` trailers and tools' own "generated with" lines, for Claude
+  Code, GitHub Copilot, Cursor, OpenAI Codex, Devin, Jules, Gemini, Amazon Q,
+  OpenHands and Aider), lists the files those commits touched that still exist,
+  and shows how many have a current, passing verdict bound to their bytes. It
+  needs no setup, runs nothing and makes no network calls. `--since` sets the
+  window (default 90 days), `--json` prints the report.
+
 ### Security
 - **sigstore 3.1.0 → 4.1.1**, which brings @sigstore/core 3.2.1, and glob and
   minimatch pinned to fixed releases (14.0.2 and 11.0.1 or later) through npm

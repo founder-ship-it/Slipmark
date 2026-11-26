@@ -33,6 +33,24 @@ Slipmark verify: 1 verified · 1 refused
                          examples/attestation/spec.md. The file changed after the verdict.
 ```
 
+See where you stand first, with nothing to set up. On a repo where agents write
+most of the code it looks something like this:
+
+```
+$ npx slipmark check
+Slipmark check: commits since 90 days ago
+
+  412 commits · 157 marked as written with a coding agent
+    Claude Code     121
+    GitHub Copilot  36
+
+  Files those commits touched that are still here: 88
+  With a current, passing verdict bound to their bytes: 0
+```
+
+It reads `git log` and any attestations already in the repo. It runs nothing and
+sends nothing anywhere.
+
 Set it up in one command: `npx slipmark init`. Your coding agents then write their sign-off with `slipmark attest` (see [Works with your coding agent](#works-with-your-coding-agent)). No model calls, no account, one GitHub Action.
 
 A slip mark is the paint line engineers draw across a bolt once it has been
@@ -491,6 +509,7 @@ the whole point of the standalone extraction.
 ## CLI
 
 ```bash
+slipmark check [--since "90 days ago"] [--dir .slipmark/attestations] [--json]
 slipmark init [--dry-run] [--no-workflow] [--no-agents] [--force]
 slipmark <pack.js> [--git <git-context.json>] [--prompts] [--emit <dir>]
 slipmark attest --by <agent> --verdict <pass|cleared|fail> --subject <file>... [--note "..."] [--out <file>]

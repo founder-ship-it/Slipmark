@@ -669,6 +669,11 @@ so it never stands in for a Slipmark verdict. And because Guard binds its
 receipt to a commit, any new commit needs a fresh Guard run, where a Slipmark
 verdict on an untouched file still counts.
 
+For a working setup, see
+[slipmark-guard-example](https://github.com/founder-ship-it/slipmark-guard-example):
+Guard's trusted workflow and Slipmark's side by side, with one gate over both
+and two pull requests, one the gate accepts and one it refuses.
+
 Run `verify-bundle` on the tree Guard checked, the pull request head. On a
 `pull_request` merge checkout, files changed on the base branch since will
 differ from what Guard saw, and the Guard entry is refused.
